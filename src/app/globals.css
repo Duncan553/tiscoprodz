@@ -1,26 +1,843 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   DESIGN TOKENS
+
+   A dark site reads as cheap for four reasons: one flat black, one font doing
+   every job, grey-on-grey body text, and no texture. These tokens fix the
+   first, third and fourth. The font pairing in layout.tsx fixes the second.
+
+   Everything is a variable so there is ONE place to change the look. No
+   component hardcodes a colour.
+   --------------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* CRIMSON, WITH DEPTH.
+     Flat #ee0600 was correct about hue and wrong about everything else — a
+     single flat fill has no light in it, so the page read as printed card
+     rather than as a lit scene. The reference poster is a GRADIENT: deep
+     oxblood at the edges, luminous crimson toward the upper centre.
+
+     So the page is a gradient (see body, below) and these stops are its range.
+     Surfaces still separate with WHITE at low alpha, never by mixing a darker
+     red in — that was what dragged the earlier palette to maroon. */
+  --red-deep: #4a0410;   /* the edges */
+  --red:      #b8071c;   /* the body of the page */
+  --red-lit:  #e00a20;   /* where the light lands, upper centre */
+
+  --surface-0: var(--red);
+  --surface-1: rgb(255 255 255 / 0.07);   /* cards, rows — lifted, never darker */
+  --surface-2: rgb(255 255 255 / 0.15);   /* raised: hover, active */
+  --surface-3: rgb(255 255 255 / 0.22);
+  --line:      rgb(255 255 255 / 0.22);   /* dividers, card edges — decorative */
+  /* INPUT AND CONTROL BORDERS. Measured, not chosen by eye: at 0.36 alpha these
+     came out at 1.86:1 against the card behind them, well under the 3:1 floor
+     for an interactive boundary — so the edge of every field was invisible and
+     filling the form meant hunting for the box. */
+  --line-2:    rgb(255 255 255 / 0.62);
+  /* The focused state has to be unmistakable, not a tint. */
+  --focus:     #ffffff;
+
+  /* Text. Pure white for anything that matters; the softer steps are tinted
+     white, never grey — grey on red turns muddy pink and reads as broken. */
+  --text-1: #ffffff;
+  --text-2: #ffdcd9;
+  --text-3: #ffbab5;
+  --text-4: #f0938e;
+
+  /* THE PRIMARY ACTION IS WHITE. On a saturated red ground white is the highest
+     contrast available, and a warm accent on a warm ground is exactly how a
+     button stops looking like a button. Amber survives as a small highlight. */
+  --on-accent: #8c0616;   /* deep red text, for sitting on a white fill */
+  --accent:      #ffffff;
+  --accent-hot:  #ffc861;
+  --accent-soft: rgb(255 255 255 / 0.16);
+
+  /* Fluid type — one scale from a 360px phone to a desktop, no breakpoints. */
+  --text-hero: clamp(2.75rem, 9vw, 6rem);
+  --text-h1: clamp(2rem, 5vw, 3.25rem);
+  --text-h2: clamp(1.5rem, 3vw, 2rem);
+
+  /* Motion. Short, compositor-only. --dur-slide is the ONE exception to
+     "nothing over 320ms": a full-bleed hero change is a scene change, not a UI
+     response, and at 300ms it reads as a glitch. Nothing else may borrow it. */
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-slide: 620ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The sticky header's exact height: h-16 (64px) plus its 1px bottom border.
+     The hero subtracts this, because a 100svh section sitting BELOW a 65px
+     header totals 65px more than the screen — which put the slide counter and
+     arrows just under the fold on every laptop. */
+  --header-h: 65px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), var(--font-inter), sans-serif;
+  --color-background: var(--surface-0);
+  --color-foreground: var(--text-1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html { font-family: var(--font-sans); }
+
+  /* THE FONT VARIABLES HAVE TO BE RE-DECLARED HERE, and this is not redundant.
+     next/font emits its `--font-*` custom properties on a CLASS, which we put on
+     <body>. `@theme inline` above defines --font-display on :root — where
+     --font-display-face does not exist yet, so it substitutes to nothing and
+     every heading silently falls back to the browser default.
+     That bug shipped unnoticed for days because the fallback for a serif display
+     face is Times New Roman: also a serif, so it looked approximately right.
+     Re-declaring at body scope, BELOW the class that defines the face, is what
+     makes the substitution resolve. */
+  body {
+    --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  body {
+    /* The lit crimson field. `fixed` so the gradient belongs to the VIEWPORT and
+       does not slide away as you scroll — a scrolling gradient re-lights the
+       page under the reader and looks like a rendering fault on a long list. */
+    background: var(--red);
+    background-image:
+      radial-gradient(90% 65% at 50% 0%, var(--red-lit) 0%, transparent 62%),
+      radial-gradient(120% 100% at 50% 120%, var(--red-deep) 0%, transparent 70%);
+    background-attachment: fixed;
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Headlines get the display face automatically, so no page remembers to.
+     Archivo Black is already heavy, so `font-weight` on a heading is a no-op —
+     what it needs instead is NEGATIVE tracking. A heavy grotesque set at default
+     spacing looks like it was typed, not set. */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+  }
+
+  /* GRAIN. 3.5% noise over the whole page — the single most effective way to
+     stop a dark background reading as an unstyled div. Fixed and
+     pointer-events:none so it never intercepts a click. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Chrome paints autofilled inputs pale blue with near-black text, which on a
+     dark form looks broken. The background cannot be set directly — the trick is
+     an inset shadow the size of the field plus text-fill-color. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-1);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-1) inset;
+    caret-color: var(--text-1);
+    transition: background-color 9999s ease-in-out 0s;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* --- form controls, one definition each ------------------------------- */
+  .field {
+    width: 100%;
+    /* Darker than the card it sits on, so the field reads as a WELL you type
+       into. A field the same tone as its container relies entirely on the
+       border to exist. */
+    background: rgb(0 0 0 / 0.28);
+    border: 1px solid var(--line-2);
+    border-radius: 0.6rem;
+    padding: 0.625rem 0.875rem;
+    /* 16px, not 15. iOS Safari ZOOMS THE WHOLE PAGE when a focused input's font
+       is under 16px — the form then sits half off-screen and every later field
+       has to be panned to. */
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--text-1);
+    outline: none;
+    transition: border-color var(--dur-1) var(--ease-out),
+                box-shadow var(--dur-1) var(--ease-out);
+  }
+  /* Placeholders are hints, but they still have to be READ — --text-4 was too
+     dim against the new darker field. */
+  .field::placeholder { color: rgb(255 255 255 / 0.55); }
+
+  /* Focus: a white border plus a ring. Colour alone is not enough — it is the
+     one state a keyboard user navigates by, and it has to survive being looked
+     at out of the corner of an eye. */
+  .field:focus {
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 0.28);
+  }
+
+  /* File inputs are a different control wearing the same class: give the button
+     part enough contrast to read as pressable. */
+  .field[type="file"] {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+  }
+  .field[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: rgb(255 255 255 / 0.9);
+    color: var(--on-accent);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .label {
+    display: block;
+    /* 0.8125rem, not 0.75: labels are the thing you read to know what a field
+       wants, and uppercase at 12px with wide tracking is genuinely hard work. */
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    margin-bottom: 0.4375rem;
+  }
+
+  /* Primary action. transform-only press, so a tap never triggers layout. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--accent);
+    /* Red on white. The inverse of the page, which is the strongest contrast a
+       one-colour site has available. */
+    color: var(--on-accent);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border-radius: 0.6rem;
+    padding: 0.6875rem 1.25rem;
+    /* 44px: the smallest target a thumb hits reliably. */
+    min-height: 44px;
+    cursor: pointer;
+    transition: transform var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
+  }
+  .btn:hover { background: var(--text-2); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Ghost: outlined, so it never competes with the white primary. */
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--line-2);
+    color: var(--text-1);
+  }
+  .btn-ghost:hover { background: var(--surface-2); }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+  }
+
+  /* A small rounded tag. Used for beat tags and for "Unlimited" in the licence
+     table, where a pill is what makes an unlimited cell readable at a glance
+     against the numeric ones. */
+  .chip {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 11px;
+    white-space: nowrap;
+    background: var(--surface-2);
+    color: var(--text-2);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--accent-soft);
+    color: var(--text-1);
+  }
+
+  /* The small caps label above a section title. It carries what the section IS,
+     which frees the big heading to be short. */
+  .eyebrow {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-hot);
+  }
+}
+
+@layer utilities {
+  /* ---------------------------------------------------------------------
+     BEAT LIST ROW
+
+     Fixed columns are the whole reason a list beats a card grid at scale: BPM,
+     key and price land on the same x-position in every row, so the eye runs
+     straight down one number instead of hunting inside twenty boxes.
+
+     minmax(0, 1fr) on the title column, NOT plain 1fr. A bare 1fr has an
+     implicit min-content floor and will shove the price column off the right
+     edge rather than let the title truncate. This bites silently.
+     --------------------------------------------------------------------- */
+  .beat-row {
+    display: grid;
+    align-items: center;
+    gap: 0.75rem;
+    /* phone: play · art · title. Three columns, and the title takes the rest —
+       the format chips are hidden below md and folded into the meta line, so
+       there is nothing competing for the width. */
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    /* desktop: play · art · title · tags · bpm · key · price
+       The title is capped rather than greedy — one very long title should not
+       set the column width for the whole catalogue — and the slack goes to
+       tags, which is the column people actually scan for a vibe. */
+    .beat-row {
+      grid-template-columns: auto auto minmax(0, 20rem) minmax(0, 1fr) 5.5rem 6rem 7rem;
+      gap: 1rem;
+    }
+  }
+
+  /* Hover is a SURFACE change, not a shadow — on a dark page a shadow reads as
+     blur, while a lighter surface reads as closer. Pointer devices only, or a
+     phone tap leaves the row stuck looking hovered. */
+  @media (hover: hover) and (pointer: fine) {
+    .beat-row {
+      transition: background var(--dur-1) var(--ease-out),
+                  border-color var(--dur-1) var(--ease-out),
+                  transform var(--dur-1) var(--ease-out);
+    }
+    .beat-row:hover {
+      background: var(--surface-2);
+      border-color: var(--line-2);
+      /* 2px, transform only — no layout, no paint, and enough to register as
+         "this row is the one under your cursor" without the list jumping. */
+      transform: translateY(-2px);
+    }
+  }
+
+  /* One entrance shape, reused. 12px of travel on purpose: the eye tracks
+     DISTANCE, so a long slide feels slow at the same duration. */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .rise { animation: rise var(--dur-2) var(--ease-out) both; }
+
+  /* Cascade for lists, 40ms apart, capped at 8 — past that the last row is
+     visibly waiting on the first, which is just slowness with extra steps. */
+  .stagger > * { animation: rise var(--dur-2) var(--ease-out) both; }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger > *:nth-child(n+8) { animation-delay: 280ms; }
+
+  /* The page background now carries its own light (see body), so the hero no
+     longer needs a wash of its own — two overlapping glows just washed the type
+     out. Kept as a no-op hook so markup does not have to change. */
+  .glow { position: relative; }
+
+  /* Anyone who asked their OS to stop animations gets no animation. Delays are
+     zeroed too, or a staggered list arrives late with nothing to explain it. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* The audio scrubber and volume slider. Styling a range input needs the
+   vendor pseudo-elements; there is no standard way yet. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 9999px; background: var(--line-2);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; margin-top: -6px;
+  height: 16px; width: 16px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px; border-radius: 9999px; background: var(--line-2);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 16px; width: 16px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   HERO
+
+   The reference is an editorial fashion slider: a wide-tracked eyebrow, one
+   enormous serif title, the artwork overlapping it, and a slide counter with
+   arrows in the bottom-right. These are the pieces of that layout that CSS can
+   own; the transition itself is Motion's job (components/HeroSlider.tsx).
+   --------------------------------------------------------------------------- */
+.hero-eyebrow {
+  /* "T H E   L I T T L E" — the spaced-out line above the title. Tracking this
+     wide only works UPPERCASE at small size; on lowercase body text it is
+     unreadable. */
+  font-size: clamp(0.625rem, 1.4vw, 0.8125rem);
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 400;      /* Archivo Black has one weight and it is this one. */
+  font-size: var(--text-hero);
+  /* 0.86 leading is most of what makes big type look designed, and it is what
+     lets stacked lines read as one block rather than three sentences. */
+  line-height: 0.86;
+  /* Tighter than the headings above: the bigger the type, the looser default
+     spacing looks, so tracking has to come in as size goes up. */
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+
+/* The counter: *01 large in white, the total small and dim beside it. */
+.hero-counter {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The hero used to carry a dark radial vignette. It was the single biggest
+   reason the page read as "dark red" — a full-bleed dark overlay drags the whole
+   composition toward maroon no matter how bright the base is. The artwork gets
+   its own shadow instead, so only the area right under it darkens. */
+
+/* Arrow buttons. Square, hairline, no fill until hover — the reference keeps
+   them almost invisible so they never compete with the title. */
+.hero-arrow {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-2);
+  border-radius: 0.5rem;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.hero-arrow:hover { background: var(--surface-2); color: var(--text-1); }
+.hero-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------------------------------------------------------------------------
+   DUOTONE
+
+   The grade itself is an SVG gradient map — see components/hero/Duotone.tsx for
+   what it does and why `mix-blend-mode: color` was the wrong tool.
+
+   `screen` is the other half. On a dark base, screen blending makes BLACK
+   TRANSPARENT: the darkest parts of the footage land exactly on the page colour
+   and vanish into it, so there is no rectangle edge and no box. What is left
+   floating is the subject's light — which is what "blends with the red" means
+   in practice.
+
+   isolation:isolate on the parent is load-bearing: mix-blend-mode composites
+   against the nearest stacking context, and without it the media would blend
+   with whatever is behind the whole section instead of its own backdrop.
+   --------------------------------------------------------------------------- */
+.duotone {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* DESCENDANT, not child. `>` looked correct and silently matched nothing: the
+   media sits two divs deep inside the Drift wrappers, so the grade was never
+   applied at all.
+
+   THE FILTER ORDER IS THE WHOLE TRICK, and it is left-to-right:
+
+     brightness/contrast FIRST — stretch the footage's real range.
+     url(#tsc-duotone) SECOND  — map that stretched range onto the red ramp.
+
+   Measured, not guessed: these clips have a mean luminance of 45/255 and a
+   BRIGHTEST PIXEL of 52. Nearly the whole frame is black. Feeding that straight
+   into a gradient map lands every pixel in the bottom fifth of the ramp — all
+   shadow colour, no highlight — which renders as a flat field. Stretching first
+   is what gives the map something to work with.
+
+   And `mix-blend-mode` is back to normal. `screen` makes black transparent,
+   which is elegant on bright footage and catastrophic here: a frame whose
+   brightest pixel is 20% grey contributes almost nothing over a mid-red page.
+   That combination — dark clips plus screen — is why the hero looked empty. */
+.duotone :where(img, video, svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 1.55, not 3.1. The original 3.1 was chosen to "fix" footage that looked
+     invisible — but the footage was invisible because the element was zero
+     pixels tall, not because it was dark. Once that was fixed, 3.1 blew the
+     highlights out. A lesson in tuning a number to compensate for a bug
+     somewhere else. */
+  filter: brightness(1.55) contrast(1.18) saturate(0.75) url(#tsc-duotone);
+  /* Feather the edges into the page. A full-bleed rectangle still announces
+     itself at the corners; fading the last few percent is what makes the media
+     sit IN the page rather than on it. Gentler than before, so more of the
+     frame survives. */
+  -webkit-mask-image: radial-gradient(140% 130% at 45% 40%, #000 70%, transparent 100%);
+  mask-image: radial-gradient(140% 130% at 45% 40%, #000 70%, transparent 100%);
+  opacity: 0.95;
+}
+
+/* The framed hero panel from the reference: a full-bleed image inside a rounded
+   plate with a hairline edge, rather than an object floating on the background. */
+.hero-plate {
+  position: relative;
+  border-radius: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   LAYERED HERO  (the "VANITY" composition from the reference)
+
+   Three layers on one vertical axis: the first word, the image plate, then the
+   second word over the top. The plate physically CUTS the wordmark in two.
+
+   This is stacking order — not clipping, not a mask. Which means it survives
+   any screen width, needs no JavaScript, and costs nothing to render.
+
+   The overlap is in `em` so it scales with the type instead of breaking the
+   moment the font size changes. The word size lives on the CONTAINER as
+   --hero-word, not inline on the word, because the overlap is computed from it:
+   writing `-0.28em` on the plate looks right and is wrong — `em` there resolves
+   against the PLATE's own inherited 16px, not the 120px word, so the layers
+   overlap by 4px instead of 34 and the whole composition falls apart. Deriving
+   both from one variable makes that mistake impossible.
+   --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+   THE HERO: full-bleed media, words on top.
+
+   ONE media layer and ONE content layer sharing the same box. The previous
+   version stacked them — eyebrow, word, plate, word, line, button, each in its
+   own band — which is mostly gaps, and on a wide screen the gaps grow faster
+   than the content does. Half the page was empty.
+   --------------------------------------------------------------------------- */
+
+/* `100svh`, not `100vh`. On mobile `vh` is measured with the browser chrome
+   RETRACTED, so a 100vh hero is taller than the visible area and its bottom row
+   — the CTA and the counter — hides under the address bar until you scroll.
+   `svh` is the height guaranteed visible. The 100vh line is the old-browser
+   fallback and must stay above it. */
+.hero-full {
+  position: relative;
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100svh - var(--header-h));
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* THE MEDIA LAYER always sits on a designed background of its own.
+
+   This is the poster frame, done in CSS instead of as three extra JPEGs. A
+   <video> paints nothing until it has decoded a frame — and if autoplay is
+   blocked, or the file is still downloading on a slow connection, that is a
+   TRANSPARENT box. Without something behind it the hero is briefly (or
+   permanently) empty, which is exactly what "there's no image" looks like.
+
+   So the lit plane lives here, under every slide, always. The video draws over
+   it when it is ready. Nothing to generate, nothing extra to download. */
+.hero-bg {
+  background:
+    radial-gradient(90% 70% at 22% 8%, rgb(255 90 70 / 0.38), transparent 62%),
+    radial-gradient(70% 60% at 85% 95%, rgb(20 0 3 / 0.85), transparent 70%),
+    linear-gradient(155deg, #c0051a 0%, #7a0312 45%, #3a0109 100%);
+}
+
+/* The media, edge to edge. `cover` crops rather than letterboxes — a hero with
+   bars down the side is worse than a crop.
+
+   EVERY div in the chain, not just the first. This is the bug that made the
+   hero look empty for hours, and it is worth being precise about:
+
+   `Drift` renders TWO nested divs (one owns the scroll transform, one owns the
+   ambient loop). The outer one takes the className and so matched the old
+   `.hero-bg > div` rule; the INNER one is anonymous, so it stayed
+   position:static with height:auto. Its only child is the <video>, set to
+   `height: 100%` — and 100% of an auto-height parent is ZERO.
+
+   So the video measured 1521 x 0. It was loaded, decoded, playing, correctly
+   filtered, and zero pixels tall. Nothing rendered, and every symptom pointed
+   at the colour grade instead.
+
+   `.hero-bg div` covers the whole chain however deep the wrappers nest. The
+   lesson, written into the skills: when an element is invisible, measure
+   getBoundingClientRect() BEFORE touching a single style. */
+.hero-bg,
+.hero-bg div,
+.hero-bg img,
+.hero-bg video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hero-bg img,
+.hero-bg video {
+  object-fit: cover;
+}
+
+/* THE SCRIM. Not decoration — it is the only thing guaranteeing the words stay
+   readable over media nobody has previewed, including the brightest frame of a
+   video. Anchored where the TEXT is (bottom-left), not a flat wash: an even 50%
+   overlay just makes the picture muddy and still does not guarantee contrast.
+
+   Two gradients — one up from the bottom for the headline band, one in from the
+   left for the column — so the top-right of the image stays clear. */
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* Anchored where the TEXT is — heavy at the bottom-left, clear top-right, so
+     the footage stays visible in the half the headline does not occupy. An even
+     wash would guarantee contrast everywhere and show the video nowhere. */
+  /* Tuned twice. Too heavy and the footage is a flat gradient; too light and
+     the headline greys out against a bright frame. These values keep the
+     bottom-left readable while the top-right of the media stays clear. */
+  background:
+    linear-gradient(to top, rgb(30 1 5 / 0.80) 0%, rgb(30 1 5 / 0.26) 42%, transparent 66%),
+    linear-gradient(to right, rgb(30 1 5 / 0.66) 0%, rgb(30 1 5 / 0.12) 40%, transparent 60%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100svh - var(--header-h));
+  display: flex;
+  /* pan-y is load-bearing: without it the horizontal drag swallows vertical
+     scrolling and the page traps the reader inside the carousel. */
+  touch-action: pan-y;
+  cursor: grab;
+}
+.hero-content:active { cursor: grabbing; }
+
+/* Content spreads into the CORNERS. A single centred column leaves all four of
+   them empty, which is exactly what "not using the space" looks like. */
+.hero-content__grid {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 3rem 1.5rem 1.75rem;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 1.5rem;
+}
+
+.hero-slot--top { grid-row: 1; }
+.hero-slot--main {
+  grid-row: 2;
+  align-self: end;
+  max-width: 44rem;
+}
+.hero-slot--controls {
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.hero-eyebrow {
+  font-size: clamp(0.625rem, 1.4vw, 0.8125rem);
+  font-weight: 600;
+  /* Tracking this wide only works UPPERCASE at small size; on lowercase body
+     text it is unreadable. */
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.82);
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 400;      /* Archivo Black ships one weight and it is this one. */
+  /* Bigger than it could be in the stacked layout: over media, with a scrim
+     under it, the headline can carry the whole composition. */
+  font-size: clamp(2.75rem, 11vw, 8rem);
+  line-height: 0.86;
+  /* The bigger the type, the looser default spacing looks — tracking has to
+     come in as size goes up. */
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: pre-line;   /* renders the \n in the title as a real break */
+  text-wrap: balance;
+}
+
+.hero-line {
+  margin-top: 1.25rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  max-width: 46ch;
+  color: rgb(255 255 255 / 0.88);
+}
+
+.hero-counter {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Square, hairline, no fill until hover — the reference keeps these almost
+   invisible so they never compete with the headline. */
+.hero-arrow {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  border-radius: 0.5rem;
+  color: rgb(255 255 255 / 0.85);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.hero-arrow:hover { background: rgb(255 255 255 / 0.14); color: #fff; }
+
+@media (min-width: 768px) {
+  .hero-content__grid { padding: 4rem 2rem 2rem; }
+}
+
+/* ---------------------------------------------------------------------------
+   FOCUS, EVERYWHERE
+
+   One rule for every interactive element. `:focus-visible` rather than `:focus`
+   so a mouse click does not leave a ring behind, while keyboard navigation
+   always shows one. Without this, tabbing through a form is invisible — which
+   is the difference between a form being usable without a mouse and not.
+   --------------------------------------------------------------------------- */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Anything disabled must LOOK disabled and refuse the pointer. A control that
+   looks live and does nothing is worse than one that is obviously off. */
+:where(button, input, select, textarea):disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   SHIMMER WORDMARK  (the "LOADING" reference)
+
+   Big type with a metallic highlight travelling across it. Two things make it
+   read as metal rather than as a glowing div:
+
+   1. The gradient is mostly BASE colour with a narrow bright band. A gradient
+      that is 50% highlight looks like a colour wash; a 12% band looks like a
+      light source passing over a surface.
+   2. It is clipped to the GLYPHS, not the box — `background-clip: text` with a
+      transparent fill. Clipped to the box it is just a sweeping rectangle.
+
+   Animating `background-position` is the one place this repo animates a
+   non-compositor property on purpose: there is no transform that moves a
+   gradient inside its own element, and it is a single element, so the paint
+   cost is bounded and constant.
+   --------------------------------------------------------------------------- */
+@keyframes wordmark-sweep {
+  from { background-position: -140% 0; }
+  to   { background-position: 240% 0; }
+}
+
+.wordmark-shine {
+  background-image: linear-gradient(
+    100deg,
+    var(--text-1) 0%,
+    var(--text-1) 38%,
+    #ffffff 46%,
+    var(--accent-hot) 50%,
+    #ffffff 54%,
+    var(--text-1) 62%,
+    var(--text-1) 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* The fallback matters: if background-clip:text is unsupported the text would
+     be invisible, so a paint-order fallback keeps it readable. */
+  -webkit-text-fill-color: transparent;
+  animation: wordmark-sweep 5.5s var(--ease-move) infinite;
+}
+
+/* The sweep is decorative and autonomous, so reduced motion stops it outright
+   and the word simply sits there in its base colour. */
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-shine {
+    animation: none;
+    background-image: none;
+    color: var(--text-1);
+    -webkit-text-fill-color: var(--text-1);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   FOOTER WORDMARK
+
+   An oversized mark that fills the footer's width, revealed as it scrolls into
+   view. `cqw`-free: sized on vw so it tracks the viewport rather than a
+   container, which is what makes it feel like a bottom edge to the whole page.
+   --------------------------------------------------------------------------- */
+.footer-mark {
+  font-family: var(--font-display);
+  /* 14.2vw fits TISCOPRODZ (10 characters) inside the 72rem container at every
+     width. 17vw cut the final Z, which reads as a bug rather than a crop —
+     a deliberate crop has to take a whole letter, not half of one. */
+  font-size: clamp(2.5rem, 14.2vw, 11.2rem);
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  /* Cropped by the footer's overflow so it reads as a mark the page sits on,
+     not a heading that happens to be large. */
+  margin-bottom: -0.12em;
 }

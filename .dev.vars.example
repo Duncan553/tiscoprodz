@@ -1,0 +1,31 @@
+# Copy to .dev.vars (gitignored) for `pnpm run preview`.
+# In production these are set with: wrangler secret put <NAME>
+#
+# wrangler reads .dev.vars the way a .env file works, but for the WORKER —
+# process.env in a Next route will not see these during `next dev`, only under
+# `pnpm run preview`, which runs the real Worker. That difference is the usual
+# reason "it works in dev and 500s in preview".
+
+# Signs the admin session cookie. Any long random string.
+#   openssl rand -hex 32
+SESSION_SECRET=
+
+# Flutterwave SECRET key (FLWSECK_TEST-… while testing). Never the public key,
+# and never in wrangler.jsonc — that file is committed.
+FLUTTERWAVE_SECRET_KEY=
+
+# The producer's Flutterwave SUBACCOUNT id — looks like RS_1A2B3C...
+# This is what sends them 90% of every sale directly, with no payout run.
+# Leave it empty and sales still work; the whole amount just lands in the main
+# account and /admin -> Earnings flags those orders as needing a manual payout.
+FLUTTERWAVE_PRODUCER_SUBACCOUNT=
+
+# The "Secret hash" you type into Flutterwave's webhook settings. Flutterwave
+# sends it back in the `verif-hash` header on every webhook, and that is the
+# only thing proving a webhook is really from them.
+FLUTTERWAVE_SECRET_HASH=
+
+# Used only when the live FX lookup fails. KES per USD, and the margin above
+# mid-market that covers the bank's spread.
+USD_TO_KES_FALLBACK=130
+USD_TO_KES_MARGIN=1.03

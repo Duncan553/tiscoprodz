@@ -1,0 +1,77 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // ---------------------------------------------------------------------------
+  // THE WHOLE SITE IS ONE CLOUDFLARE WORKER.
+  //
+  // `next build` produces a Node server; @opennextjs/cloudflare re-packages it
+  // into .open-next/worker.js, which is what `main` points at. Static files
+  // (JS chunks, images) are served by Cloudflare's asset host, not the Worker —
+  // that's the `assets` block, and it's why the Worker never pays for them.
+  // ---------------------------------------------------------------------------
+  "name": "tiscoprodz",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+
+  // nodejs_compat: Next's server code imports node:* modules. Without this flag
+  // the Worker fails to start with "Cannot find module 'node:buffer'".
+  // global_fetch_strictly_public: a fetch() to our OWN domain goes out to the
+  // internet and comes back, instead of short-circuiting inside the isolate —
+  // required by OpenNext so Next's internal fetches behave like they do on Node.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // ---------------------------------------------------------------------------
+  // BINDINGS. These are the database and file storage. They are NOT URLs and
+  // NOT env vars with secrets in them — Cloudflare injects live objects into
+  // the Worker, so there is no connection string to leak and no network hop to
+  // another region. `binding` is the name our code reads (env.DB, env.R2).
+  // ---------------------------------------------------------------------------
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tiscoprodz",
+      // Filled in by `pnpm run db:create` — paste the id it prints here.
+      "database_id": "cf039580-f92d-43f2-8d9f-526f741dea30",
+      "migrations_dir": "drizzle"
+    }
+  ],
+
+  // ---------------------------------------------------------------------------
+  // R2 — COMMENTED OUT UNTIL A PAYMENT METHOD IS ON THE ACCOUNT.
+  //
+  // Cloudflare requires a card before a bucket can be created, even on the free
+  // tier (10GB storage, free egress). Workers and D1 do not. `wrangler deploy`
+  // validates every binding, so leaving this declared while the bucket does not
+  // exist blocks the whole deploy.
+  //
+  // Everything except the FILES works without it: the landing page (hero video
+  // ships as a static asset, not from R2), licences, contact, admin sign-in,
+  // the promotion toggle. Upload and download routes answer 503 with a message
+  // saying exactly this — see storageUnavailable() in src/lib/cf.ts.
+  //
+  // TO TURN IT ON: add the card, `pnpm run r2:create`, uncomment this block,
+  // `pnpm run deploy`. No code changes.
+  // "r2_buckets": [
+  //   {
+  //     "binding": "R2",
+  //     "bucket_name": "tiscoprodz-media"
+  //   }
+  // ],
+
+  // Non-secret config ONLY. This file is committed, so nothing sensitive goes
+  // in it. The three secrets — SESSION_SECRET, FLUTTERWAVE_SECRET_KEY,
+  // FLUTTERWAVE_SECRET_HASH — live in .dev.vars locally (gitignored) and are
+  // pushed to production with `wrangler secret put`, where Cloudflare stores
+  // them encrypted and they are never readable back.
+  "vars": {
+    "SITE_URL": "https://tiscoprodz.com",
+    "ADMIN_EMAIL": "tscoprodz@gmail.com"
+  },
+
+  "observability": { "enabled": true }
+}

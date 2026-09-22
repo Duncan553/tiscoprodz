@@ -1,0 +1,79 @@
+// LOCAL DEVELOPMENT ONLY — never deployed.
+//
+// Identical to wrangler.jsonc except that R2 is enabled. See the note on the
+// r2_buckets block below for why the two differ.
+//
+// Used by `pnpm dev` and `pnpm run preview` via --config. Production uses
+// wrangler.jsonc, which is the file `pnpm run deploy` reads.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // ---------------------------------------------------------------------------
+  // THE WHOLE SITE IS ONE CLOUDFLARE WORKER.
+  //
+  // `next build` produces a Node server; @opennextjs/cloudflare re-packages it
+  // into .open-next/worker.js, which is what `main` points at. Static files
+  // (JS chunks, images) are served by Cloudflare's asset host, not the Worker —
+  // that's the `assets` block, and it's why the Worker never pays for them.
+  // ---------------------------------------------------------------------------
+  "name": "tiscoprodz-local",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+
+  // nodejs_compat: Next's server code imports node:* modules. Without this flag
+  // the Worker fails to start with "Cannot find module 'node:buffer'".
+  // global_fetch_strictly_public: a fetch() to our OWN domain goes out to the
+  // internet and comes back, instead of short-circuiting inside the isolate —
+  // required by OpenNext so Next's internal fetches behave like they do on Node.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // ---------------------------------------------------------------------------
+  // BINDINGS. These are the database and file storage. They are NOT URLs and
+  // NOT env vars with secrets in them — Cloudflare injects live objects into
+  // the Worker, so there is no connection string to leak and no network hop to
+  // another region. `binding` is the name our code reads (env.DB, env.R2).
+  // ---------------------------------------------------------------------------
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tiscoprodz",
+      // Filled in by `pnpm run db:create` — paste the id it prints here.
+      "database_id": "cf039580-f92d-43f2-8d9f-526f741dea30",
+      "migrations_dir": "drizzle"
+    }
+  ],
+
+  // R2 IS ENABLED HERE AND COMMENTED OUT IN wrangler.jsonc, on purpose.
+  //
+  // Cloudflare refuses to create a real R2 bucket until a payment method is on
+  // the account ("Please enable R2 through the Cloudflare Dashboard", code
+  // 10042). But `wrangler dev` does not use a real bucket — it simulates R2 on
+  // local disk, no card, no account involved.
+  //
+  // So production deploys without R2 (uploads answer 503 with a clear message)
+  // while local development has working file storage. One file each, rather
+  // than a binding that has to be hand-edited before every deploy.
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "tiscoprodz-media"
+    }
+  ],
+
+  // Non-secret config ONLY. This file is committed, so nothing sensitive goes
+  // in it. The three secrets — SESSION_SECRET, FLUTTERWAVE_SECRET_KEY,
+  // FLUTTERWAVE_SECRET_HASH — live in .dev.vars locally (gitignored) and are
+  // pushed to production with `wrangler secret put`, where Cloudflare stores
+  // them encrypted and they are never readable back.
+  "vars": {
+    "SITE_URL": "https://tiscoprodz.com",
+    "ADMIN_EMAIL": "tscoprodz@gmail.com"
+  },
+
+  "observability": { "enabled": true }
+}
