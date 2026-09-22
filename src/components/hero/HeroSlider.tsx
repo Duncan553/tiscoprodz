@@ -252,6 +252,15 @@ export function HeroSlider() {
  * does not play at all. `playsInline` stops iOS hijacking it fullscreen, and
  * there are no controls because this is scenery, not a clip to operate.
  */
+/**
+ * How long the hero waits for a first video frame before giving up and showing
+ * the graphic instead. Long enough that a slow Kenyan mobile connection still
+ * gets its video (an 8MB file at 500KB/s is ~16s, but the FIRST FRAME arrives
+ * far sooner because the files are faststart), short enough that nobody stares
+ * at an empty hero wondering if the site is broken.
+ */
+const STALL_MS = 4000;
+
 function SlideArt({ src }: { src: string }) {
   const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -273,7 +282,49 @@ function SlideArt({ src }: { src: string }) {
     // Belt and braces: some browsers only honour the muted PROPERTY, not the
     // attribute, and an unmuted video is blocked outright.
     v.muted = true;
-    v.play().catch(() => { /* autoplay blocked — the poster frame stands in */ });
+    v.play().catch(() => { /* autoplay blocked — the graphic stands in */ });
+
+    // THE SILENT STALL, which `onError` does NOT catch — and which is NOT the
+    // same as "failed to load".
+    //
+    // The obvious check is `readyState < 2` (no frame yet). That catches a slow
+    // or dead download, but it misses the worse case, measured on the live site:
+    //
+    //     readyState 4, 1280x720, 20.8s duration, 15s buffered, error null,
+    //     play() RESOLVED without rejecting — and paused:true, currentTime
+    //     frozen at 0.14 seconds.
+    //
+    // Fully loaded, first frame decoded and painted, playback accepted, and
+    // then nothing moves. A readyState check would score that as healthy. So
+    // the real test is not "did it load" but "is the clock advancing" — the
+    // only thing that actually distinguishes a video from a still image.
+    //
+    // Either way the fallback is the same graphic a hard error shows. A frozen
+    // frame is not a disaster on its own, but a hero that silently pretends to
+    // be a video is worse than one that is honestly a still.
+    const startedAt = v.currentTime;
+    const deadline = setTimeout(() => {
+      const noFrame = v.readyState < 2;
+      const notMoving = v.paused || v.currentTime <= startedAt + 0.05;
+      if (noFrame || notMoving) setFailed(true);
+    }, STALL_MS);
+
+    // Cancel the moment the clock genuinely advances — `timeupdate` fires with
+    // real playback progress, unlike `loadeddata`, which only says bytes
+    // arrived and would have cancelled the deadline in exactly the broken case
+    // above.
+    const cancel = () => {
+      if (v.currentTime > startedAt + 0.05) {
+        clearTimeout(deadline);
+        v.removeEventListener("timeupdate", cancel);
+      }
+    };
+    v.addEventListener("timeupdate", cancel);
+
+    return () => {
+      clearTimeout(deadline);
+      v.removeEventListener("timeupdate", cancel);
+    };
   }, [isVideo, src]);
 
   if (failed) return <PlateGraphic />;
