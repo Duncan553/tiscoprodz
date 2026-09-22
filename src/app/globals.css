@@ -81,7 +81,13 @@
 }
 
 @layer base {
-  html { font-family: var(--font-sans); }
+  /* NOT on <html>. next/font puts --font-inter on a class we attach to <body>,
+     so resolving --font-sans at the html level substitutes an undefined
+     variable, the whole declaration is dropped, and every piece of UI text
+     falls back to the browser default — Times New Roman, which on a page that
+     already uses a serif display face is almost invisible as a bug.
+     Declared on body, below the class that defines the variable. */
+  html { font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif); }
 
   /* THE FONT VARIABLES HAVE TO BE RE-DECLARED HERE, and this is not redundant.
      next/font emits its `--font-*` custom properties on a CLASS, which we put on
@@ -93,8 +99,10 @@
      Re-declaring at body scope, BELOW the class that defines the face, is what
      makes the substitution resolve. */
   body {
-    --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-display-face), Georgia, serif;
     --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    /* The one that actually takes effect — see the note on html above. */
+    font-family: var(--font-sans);
   }
 
   body {
@@ -116,9 +124,13 @@
      spacing looks like it was typed, not set. */
   h1, h2, h3 {
     font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: -0.035em;
-    line-height: 1.04;
+    /* 800, not 400. Bodoni is a variable didone — at its default weight the
+       hairlines vanish and a heading reads as body text set large. */
+    font-weight: 800;
+    /* Looser than a grotesque wanted. A didone's thin strokes need air; tight
+       tracking closes the counters and the word turns into a smear. */
+    letter-spacing: -0.015em;
+    line-height: 1.06;
   }
 
   /* GRAIN. 3.5% noise over the whole page — the single most effective way to
@@ -414,24 +426,11 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-2);
 }
 
-.hero-title {
-  font-family: var(--font-display);
-  font-weight: 400;      /* Archivo Black has one weight and it is this one. */
-  font-size: var(--text-hero);
-  /* 0.86 leading is most of what makes big type look designed, and it is what
-     lets stacked lines read as one block rather than three sentences. */
-  line-height: 0.86;
-  /* Tighter than the headings above: the bigger the type, the looser default
-     spacing looks, so tracking has to come in as size goes up. */
-  letter-spacing: -0.045em;
-  text-transform: uppercase;
-  color: var(--text-1);
-}
 
 /* The counter: *01 large in white, the total small and dim beside it. */
 .hero-counter {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   line-height: 1;
   letter-spacing: -0.02em;
@@ -693,14 +692,21 @@ input[type="range"]::-moz-range-thumb {
 
 .hero-title {
   font-family: var(--font-display);
-  font-weight: 400;      /* Archivo Black ships one weight and it is this one. */
+  /* 900 — the heaviest Bodoni cut. A didone below 700 loses its stems at hero
+     size and reads as body text set large.
+     THIS RULE WAS DUPLICATED: an older .hero-title survived the hero rewrite,
+     and editing the first one changed nothing because the later block won.
+     If a style edit appears to do nothing, grep for a second definition. */
+  font-weight: 900;
   /* Bigger than it could be in the stacked layout: over media, with a scrim
      under it, the headline can carry the whole composition. */
   font-size: clamp(2.75rem, 11vw, 8rem);
   line-height: 0.86;
   /* The bigger the type, the looser default spacing looks — tracking has to
      come in as size goes up. */
-  letter-spacing: -0.045em;
+  /* Nearly neutral. A didone at -0.045em collides its own serifs; the letterform
+     already carries the drama, so the spacing should not fight it. */
+  letter-spacing: -0.005em;
   text-transform: uppercase;
   color: #fff;
   white-space: pre-line;   /* renders the \n in the title as a real break */
@@ -717,7 +723,7 @@ input[type="range"]::-moz-range-thumb {
 
 .hero-counter {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   line-height: 1;
   letter-spacing: -0.02em;
@@ -819,25 +825,41 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* ---------------------------------------------------------------------------
-   FOOTER WORDMARK
 
-   An oversized mark that fills the footer's width, revealed as it scrolls into
-   view. `cqw`-free: sized on vw so it tracks the viewport rather than a
-   container, which is what makes it feel like a bottom edge to the whole page.
+/* ---------------------------------------------------------------------------
+   FOOTER LINKS
+
+   The underline DRAWS from the left instead of a border switching on. A border
+   that appears is a step change the eye reads as a flicker; a line that grows
+   reads as a response to the pointer. scaleX only — no layout, no paint.
+
+   The pseudo-element sits a few pixels below the text rather than using
+   text-decoration, because a drawn decoration cannot be animated.
    --------------------------------------------------------------------------- */
-.footer-mark {
-  font-family: var(--font-display);
-  /* 14.2vw fits TISCOPRODZ (10 characters) inside the 72rem container at every
-     width. 17vw cut the final Z, which reads as a bug rather than a crop —
-     a deliberate crop has to take a whole letter, not half of one. */
-  font-size: clamp(2.5rem, 14.2vw, 11.2rem);
-  line-height: 0.82;
-  letter-spacing: -0.05em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  user-select: none;
-  /* Cropped by the footer's overflow so it reads as a mark the page sits on,
-     not a heading that happens to be large. */
-  margin-bottom: -0.12em;
+.footer-link {
+  position: relative;
+  color: var(--text-2);
+  transition: color var(--dur-1) var(--ease-out);
+}
+.footer-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.55rem;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-2) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .footer-link:hover { color: var(--text-1); }
+  .footer-link:hover::after { transform: scaleX(1); }
+}
+/* Keyboard users get the same signal, since they never trigger :hover. */
+.footer-link:focus-visible::after { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-link::after { transition: none; }
 }

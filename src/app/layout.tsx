@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Archivo_Black } from "next/font/google";
+import { Jost, Bodoni_Moda } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { AudioPlayer } from "@/components/AudioPlayer";
@@ -7,27 +7,36 @@ import { Footer } from "@/components/Footer";
 import { RouteBackdrop } from "@/components/RouteBackdrop";
 
 /**
- * TWO FACES, TWO JOBS.
+ * A LUXURY PAIRING. Two faces, two jobs.
  *
- * The references are all editorial POSTERS — a huge, heavy, tightly-tracked
- * headline sitting on an image. That is a grotesque's job, not a serif's, so the
- * display face is Archivo Black: one weight, very heavy, with a narrow enough
- * set to run three words across a hero without shrinking them. Playfair was
- * elegant and wrong — a high-contrast serif goes thin and fussy at 6rem, which
- * is the opposite of what a poster headline needs.
+ * DISPLAY — Bodoni Moda. The didone is the luxury letterform: hairline serifs
+ * against very heavy stems, which is the contrast every fashion house has used
+ * for a century. Crucially it is available at weight 900, so it stays
+ * authoritative at hero size instead of going thin and fussy the way a lighter
+ * didone does. That was the trap with Playfair earlier — elegant at 24px,
+ * weak at 6rem. Bodoni at 900 solves both.
  *
- * Inter stays for UI. It is unbeatable at 13px, which is exactly where a display
- * face with character starts hurting.
+ * UI — Jost. A geometric sans in the Futura lineage: the typeface luxury brands
+ * actually set their body copy and navigation in. Cleaner and more composed than
+ * a workhorse UI face, and still legible at 13px, which is where character
+ * usually starts costing you.
  *
  * `display: "swap"` paints text in a fallback immediately rather than leaving a
  * blank page while the font downloads — on Kenyan mobile data that gap is real.
  */
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const display = Archivo_Black({
+const inter = Jost({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+const display = Bodoni_Moda({
   subsets: ["latin"],
   variable: "--font-display-face",
   display: "swap",
-  weight: "400", // Archivo Black ships a single weight — it IS the bold.
+  // 700 and up only: a didone below 700 loses its stem weight at large sizes
+  // and the hero stops reading as a headline.
+  weight: ["700", "800", "900"],
 });
 
 export const metadata: Metadata = {
