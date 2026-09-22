@@ -1,10 +1,10 @@
 /**
  * FLUTTERWAVE — the only processor on this site.
  *
- * Hosted checkout: the buyer leaves for Flutterwave's page, picks card or
- * M-Pesa there, and comes back. We never see a card number or an M-Pesa PIN,
- * which keeps this site entirely out of PCI scope. That is a legal reason not to
- * build our own payment form, not a technical one.
+ * Hosted checkout: the buyer leaves for Flutterwave's page, pays by card there,
+ * and comes back. We never see a card number, which keeps this site entirely out
+ * of PCI scope. That is a legal reason not to build our own payment form, not a
+ * technical one.
  *
  * Written with plain `fetch` and Web Crypto — no axios, no node:crypto. Not a
  * style choice: axios pulls in Node http internals and `crypto.createHmac` does
@@ -12,8 +12,9 @@
  *
  * THE SITE CHARGES IN US DOLLARS. Beats are priced in USD in the database, so
  * charging dollars means no conversion sits between the price tag and the
- * payment page — the $24.99 on the beat row is the $24.99 Flutterwave asks for.
- * The KSh figure shown next to it is indicative only and is never charged.
+ * payment page — the $19.99 on the beat row is the $19.99 Flutterwave asks for.
+ * There is no second currency anywhere on this site: no KSh figure is shown,
+ * derived or charged.
  *
  * Amounts here are MAJOR units (dollars, not cents) because that is what
  * Flutterwave's API takes. Everything else in the app is integer cents, so the

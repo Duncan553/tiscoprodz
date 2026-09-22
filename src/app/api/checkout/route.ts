@@ -1,7 +1,7 @@
 import { inArray, eq } from "drizzle-orm";
 import { db, env } from "@/lib/cf";
 import { beats, orders } from "@/db/schema";
-import { startPayment, producerShareCents } from "@/lib/flutterwave";
+import { startPayment, producerShareCents, hasSplit } from "@/lib/flutterwave";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { LICENSES, isLicenseId, isAvailableFor, type LicenseId } from "@/lib/licenses";
 import { applyPromo } from "@/lib/promo";
@@ -145,6 +145,20 @@ export async function POST(req: Request) {
     // what the customer actually paid, not of a list price nobody was charged.
     const producerCents = producerShareCents(totalCents);
 
+    // WHETHER FLUTTERWAVE WILL SETTLE THE PRODUCER DIRECTLY, recorded on the
+    // order. This was missing, and the column defaults to 0 — so every order,
+    // including ones Flutterwave had already split at source, was stored as
+    // "not split". The earnings page reads exactly that flag to decide what
+    // still has to be paid by hand, so it was reporting the producer's full 90%
+    // as owed on orders they had already been paid for. Paying that list out
+    // would have paid them twice.
+    //
+    // Read from `hasSplit()` at INSERT time rather than from what startPayment
+    // returns, so the flag is written atomically with the row it describes —
+    // both read the same env var, and a later UPDATE could fail and leave the
+    // row lying.
+    const splitApplied = hasSplit();
+
     await d.insert(orders).values({
       reference,
       email,
@@ -153,6 +167,7 @@ export async function POST(req: Request) {
       discountUsdCents: discountCents,
       producerUsdCents: producerCents,
       platformUsdCents: totalCents - producerCents,
+      splitApplied: splitApplied ? 1 : 0,
       items: JSON.stringify(verified),
       status: "pending",
       downloadToken,
@@ -160,7 +175,7 @@ export async function POST(req: Request) {
 
     const origin = env().SITE_URL || new URL(req.url).origin;
 
-    const { checkoutUrl, splitApplied } = await startPayment({
+    const { checkoutUrl } = await startPayment({
       email,
       amountUsdCents: totalCents,
       reference,

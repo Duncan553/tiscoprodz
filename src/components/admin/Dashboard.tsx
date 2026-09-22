@@ -123,7 +123,7 @@ export function Dashboard() {
             aria-label="Buy one get one free"
             disabled={promo === null}
             onClick={() => togglePromo(!promo?.bogo)}
-            className="relative w-14 h-8 rounded-full shrink-0 cursor-pointer transition-colors disabled:opacity-40"
+            className="relative w-14 h-8 rounded-full shrink-0 cursor-pointer transition-colors disabled:opacity-40 tap-outset"
             style={{
               background: promo?.bogo ? "var(--accent)" : "var(--surface-2)",
               transitionDuration: "var(--dur-1)",
@@ -170,7 +170,11 @@ export function Dashboard() {
             {beats.map((b) => (
               <div key={b.id} className="card p-4 flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-display font-bold truncate">
+                  {/* `truncate` clips to an ellipsis, which on a narrow phone
+                      column can eat most of a beat name with no way to read it.
+                      `title` gives it back on hover and long-press — the text is
+                      still in the DOM for a screen reader either way. */}
+                  <p className="font-display font-bold truncate" title={b.title}>
                     {b.title}
                     {!b.published && (
                       <span

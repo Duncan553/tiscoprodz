@@ -16,7 +16,8 @@
     "db:migrate": "wrangler d1 migrations apply tiscoprodz --remote",
     "db:studio:local": "wrangler d1 execute tiscoprodz --local --command \"select id,title,published from beats\"",
     "r2:create": "wrangler r2 bucket create tiscoprodz-media",
-    "dev:worker": "wrangler dev --config wrangler.local.jsonc --port 8787"
+    "dev:worker": "wrangler dev --config wrangler.local.jsonc --port 8787",
+    "test:split": "node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/bin/esbuild scripts/fwtest/split.test.ts --bundle --format=esm --platform=node --outfile=.fwtest.mjs --alias:@/lib/cf=./scripts/fwtest/cf-stub.ts --alias:@=./src --log-level=error && node .fwtest.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

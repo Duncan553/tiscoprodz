@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatUsd } from "@/lib/money";
+import { SplitText } from "@/components/SplitText";
 import {
   LICENSES,
   LICENSE_ORDER,
@@ -37,9 +38,12 @@ export default function LicensesPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       <p className="eyebrow mb-2">Usage terms</p>
-      <h1 style={{ fontSize: "var(--text-h1)" }} className="font-display font-extrabold mb-2">
-        Licence comparison
-      </h1>
+      <SplitText
+        text="Licence comparison"
+        as="h1"
+        style={{ fontSize: "var(--text-h1)" }}
+        className="font-display font-extrabold mb-2"
+      />
       <p className="mb-10 max-w-[58ch]" style={{ color: "var(--text-2)" }}>
         What each licence lets you do. Every beat is sold under these same terms,
         in US dollars.
@@ -49,7 +53,15 @@ export default function LicensesPage() {
       {/* overflow-x-auto, not a shrinking table: five columns of numbers cannot
           usefully compress onto a 360px phone, and a horizontal scroll keeps
           every row aligned instead of reflowing into unreadable stacks. */}
-      <div className="card overflow-x-auto mb-14">
+      {/* The scroll is invisible on a phone: you see two and a half columns and
+          nothing tells you the other two exist. On the page that sells the
+          licences, that is the difference between comparing tiers and not. The
+          hint says so in words, and only on the screens where it is true. */}
+      <p className="text-xs mb-2 sm:hidden" style={{ color: "var(--text-3)" }}>
+        Swipe the table sideways to see every column — or read the same figures
+        as cards below.
+      </p>
+      <div className="card overflow-x-auto mb-14 table-scroll">
         <table className="w-full text-sm" style={{ minWidth: "46rem" }}>
           <caption className="sr-only">Licence tiers, limits and formats</caption>
           <thead>
@@ -90,9 +102,12 @@ export default function LicensesPage() {
       </div>
 
       {/* ---- per-tier rights -------------------------------------------- */}
-      <h2 style={{ fontSize: "var(--text-h2)" }} className="font-display font-bold mb-5">
-        Usage rights by tier
-      </h2>
+      <SplitText
+        text="Usage rights by tier"
+        as="h2"
+        style={{ fontSize: "var(--text-h2)" }}
+        className="font-display font-bold mb-5"
+      />
 
       <div className="grid sm:grid-cols-2 gap-4">
         {LICENSE_ORDER.map((id) => {

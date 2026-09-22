@@ -863,3 +863,221 @@ input[type="range"]::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   .footer-link::after { transition: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   FOOTER REVEAL
+
+   See components/RevealLayout.tsx for the mechanism. These are the two rules it
+   depends on, and neither can be dropped:
+
+   - `.reveal-main` must be OPAQUE, or the footer shows through the whole page
+     instead of only at the bottom. It carries the same fixed gradient as the
+     body so the seam is invisible.
+   - The footer must be `fixed` and BELOW it in the stack.
+
+   The margin-bottom is set from JavaScript because the footer's height changes
+   with the viewport.
+   --------------------------------------------------------------------------- */
+.reveal-main {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  /* Identical to body's, including `fixed` attachment, so the page and the
+     sheet on top of it are the same surface. */
+  background: var(--red);
+  background-image:
+    radial-gradient(90% 65% at 50% 0%, var(--red-lit) 0%, transparent 62%),
+    radial-gradient(120% 100% at 50% 120%, var(--red-deep) 0%, transparent 70%);
+  background-attachment: fixed;
+}
+
+footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+}
+
+/* The backdrop sits inside .reveal-main at z-index 0: above the sheet's own
+   background (a negative z-index would hide it behind that background) and
+   below the content. It is `absolute`, not `fixed` — see PageBackdrop for why
+   a fixed backdrop painted straight over the revealed footer. */
+.reveal-main > .page-backdrop {
+  z-index: 0;
+}
+
+/* On a touch device the fixed footer is revealed the same way, but iOS resizes
+   the viewport as its chrome collapses. Nothing here is viewport-height based
+   except .reveal-main's min-height, which only needs to be "at least a screen". */
+@media (prefers-reduced-motion: reduce) {
+  /* The reveal is caused by scrolling, not by an animation, so there is nothing
+     to disable — it behaves identically. Noted so nobody adds a transition. */
+}
+
+/* ---------------------------------------------------------------------------
+   SPLIT TEXT — the per-word mask reveal. See components/SplitText.tsx.
+   --------------------------------------------------------------------------- */
+.split {
+  /* The words are inline-blocks, so the spacing between them is a flex gap
+     rather than the source string's spaces (which the split discards).
+     `inline-flex` keeps the heading shrink-to-fit like normal text. */
+  display: flex;
+  flex-wrap: wrap;
+  /* 0.28em tracks the font size, so the word gap stays right at every
+     breakpoint. A fixed px gap looks cramped on the big hero size. */
+  gap: 0 0.28em;
+}
+
+.split__word {
+  /* THE MASK. Without overflow:hidden the words are simply visible below the
+     line and nothing is ever hidden — this one declaration is the effect. */
+  overflow: hidden;
+  display: inline-block;
+  /* THE DESCENDER TRAP: overflow:hidden clips at the content box, which cuts
+     the tails off g, y, p and j permanently — not just during the animation.
+     Pad the box out, then pull the extra space back with a matching negative
+     margin so the line height is unchanged. */
+  padding-bottom: 0.18em;
+  margin-bottom: -0.18em;
+  /* A clipped inline-block sets its baseline to the bottom margin edge, which
+     would drop every word relative to unsplit text beside it. */
+  vertical-align: top;
+}
+
+.split__inner {
+  display: inline-block;
+  /* The starting position is set by Motion (y: 100%), not here — declaring it
+     in CSS too would fight the inline style Motion writes and the word would
+     flash at the wrong place on the first frame. */
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The component returns unsplit text in this mode, so these classes are not
+     even rendered. Belt and braces in case a future caller hardcodes them. */
+  .split__inner { transform: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   TAP TARGETS
+
+   The floor is 44px, which is roughly the pad of an adult thumb. Under that,
+   people miss — and a miss on a phone is not a small annoyance, it is a tap on
+   whatever was next to it.
+
+   Two tools, because there are two different situations:
+
+   `.tap` grows the element itself to 44px. Use it on text links, where the
+   element has no strong visual box and nobody can see it got taller.
+
+   `.tap-outset` leaves the element exactly the size it is painted and pushes an
+   INVISIBLE hit area out past its edges with a pseudo-element. Use it when the
+   control's size is the design — a 32px switch stretched to 44px stops looking
+   like a switch. The hit area is bigger than the paint, which is what a native
+   control does too.
+   --------------------------------------------------------------------------- */
+.tap {
+  /* Deliberately sets ONE property. An earlier version also forced
+     `display: inline-flex` to centre the label, which silently overrode the
+     `flex flex-col` on any caller that needed a different layout — and because
+     this file is unlayered it beat Tailwind's utilities every time. Callers
+     choose their own display and do their own centring. */
+  min-height: 44px;
+}
+
+.tap-outset {
+  /* The element still needs a positioning context for the ::after to anchor to;
+     every current caller already sets `relative`, but this makes it safe. */
+  position: relative;
+}
+.tap-outset::after {
+  content: "";
+  position: absolute;
+  /* Pull the hit area out past the paint. Measured with elementFromPoint rather
+     than assumed: -6px gave a 43px effective target on the 32px switch — one
+     pixel under the floor, because the painted height rounds down. -7px clears
+     it. Still small enough not to overlap the neighbouring control. */
+  inset: -7px -7px;
+  /* Nothing is drawn — this only catches the touch. */
+  border-radius: inherit;
+}
+
+/* A fade on the right edge of a horizontally scrolling table, so the content
+   visibly continues past the edge instead of stopping at a hard line. Paired
+   with the written hint, because a fade alone is a hint people miss. */
+.table-scroll {
+  /* mask-image, not a gradient overlay: an overlay would need a solid colour to
+     fade to, and the surface behind this is a translucent white over the page
+     gradient, so there is no single colour that works. A mask fades the pixels
+     themselves whatever is behind them. */
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 0, #000 88%, transparent 100%);
+}
+/* Once the table fits there is nothing past the edge, so the fade would be
+   lying — it would dim real content for no reason. */
+@media (min-width: 640px) {
+  .table-scroll { -webkit-mask-image: none; mask-image: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   NAV LINKS — see components/NavLinks.tsx
+   --------------------------------------------------------------------------- */
+.nav-link {
+  position: relative;
+  /* The active underline is positioned against this, and a transform on the
+     link (the tap pop) would otherwise drag it out of place. */
+  -webkit-tap-highlight-color: transparent; /* the scale-down IS the feedback */
+}
+
+.nav-link__bar {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent-hot);
+}
+
+/* ---------------------------------------------------------------------------
+   ICON BUTTONS — see components/ContactIcons.tsx
+
+   A 44px circle holding a 20px glyph. The button is deliberately bigger than
+   the thing drawn in it: an icon at the tap-target floor looks enormous, and an
+   icon sized to look right is far too small to hit.
+   --------------------------------------------------------------------------- */
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--text-2);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  /* colour and border move together on hover; transform is the press. */
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease,
+              transform 0.12s ease;
+}
+
+.icon-btn:hover {
+  color: var(--text-1);
+  border-color: var(--line-2);
+}
+
+.icon-btn:active {
+  /* The press feedback, matching the nav links. A touch device has no hover, so
+     this is the only confirmation a tap registered. */
+  transform: scale(0.94);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent-hot);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-btn { transition: none; }
+  .icon-btn:active { transform: none; }
+}

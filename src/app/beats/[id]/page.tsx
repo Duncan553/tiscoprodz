@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPublicBeat } from "@/lib/beats";
 import { BuyPanel } from "@/components/BuyPanel";
+import { SplitText } from "@/components/SplitText";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +33,15 @@ export default async function BeatPage({ params }: { params: Promise<{ id: strin
 
         <div>
           <p className="eyebrow mb-2">{beat.genre}</p>
-          <h1 style={{ fontSize: "var(--text-h1)" }} className="font-display font-extrabold mb-3">
-            {beat.title}
-          </h1>
+          {/* The beat title is data, so it is passed as a string — SplitText
+              takes the text rather than children precisely so it can put the
+              original, unsplit sentence in aria-label. */}
+          <SplitText
+            text={beat.title}
+            as="h1"
+            style={{ fontSize: "var(--text-h1)" }}
+            className="font-display font-extrabold mb-3"
+          />
 
           <div className="flex flex-wrap gap-2 mb-5">
             {[`${beat.bpm} BPM`, beat.musicalKey, ...beat.tags].filter(Boolean).map((chip) => (

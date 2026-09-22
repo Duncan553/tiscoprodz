@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { CONTACT, whatsappLink, instagramLink, mailtoLink } from "@/lib/site";
+import { whatsappLink, instagramLink, mailtoLink } from "@/lib/site";
+import { WhatsAppIcon, InstagramIcon, EmailIcon } from "@/components/ContactIcons";
+import { SplitText } from "@/components/SplitText";
 
 /**
  * ABOUT / CONTACT.
@@ -16,22 +18,32 @@ export const metadata = {
   description: "Get in touch with Tisco Prodz about beats, licensing or custom work.",
 };
 
+/**
+ * No `value` field any more. These rows used to print the number, the address
+ * and the handle under each label; now the row says what the channel is FOR and
+ * the link does the rest. What a visitor needs to decide is "which of these do
+ * I use", and the raw address never helped with that — they are going to tap
+ * it, not copy it out by hand.
+ */
 const CHANNELS = [
   {
     label: "WhatsApp",
-    value: CONTACT.whatsapp,
+    action: "Start a chat",
+    Icon: WhatsAppIcon,
     href: whatsappLink("Hi Tisco — I found you through the site."),
     note: "Fastest for a custom beat or an exclusive.",
   },
   {
     label: "Email",
-    value: CONTACT.email,
+    action: "Open your mail app",
+    Icon: EmailIcon,
     href: mailtoLink,
     note: "Licensing questions and anything with attachments.",
   },
   {
     label: "Instagram",
-    value: `@${CONTACT.instagram}`,
+    action: "See the profile",
+    Icon: InstagramIcon,
     href: instagramLink,
     note: "New drops and works in progress.",
   },
@@ -41,9 +53,12 @@ export default function AboutPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-14">
       <p className="eyebrow mb-2">Tisco Prodz</p>
-      <h1 style={{ fontSize: "var(--text-h1)" }} className="font-display font-extrabold mb-4">
-        Get in touch
-      </h1>
+      <SplitText
+        text="Get in touch"
+        as="h1"
+        style={{ fontSize: "var(--text-h1)" }}
+        className="font-display font-extrabold mb-4"
+      />
       <p className="mb-10 max-w-[58ch] text-lg" style={{ color: "var(--text-2)" }}>
         Every beat in the catalogue is licensed instantly — pick a tier, pay, and
         the files are on the next screen. For an exclusive, a custom beat, or
@@ -57,17 +72,23 @@ export default function AboutPage() {
             href={c.href}
             target={c.href.startsWith("http") ? "_blank" : undefined}
             rel={c.href.startsWith("http") ? "noreferrer" : undefined}
-            className="card p-5 flex items-center justify-between gap-4 transition-colors"
+            className="card p-5 flex items-center gap-4 transition-colors"
           >
-            <span className="min-w-0">
-              <span className="block text-xs uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
+            {/* The glyph carries the recognition — people find WhatsApp by its
+                shape faster than by the word. It is aria-hidden; the row's own
+                text is already the accessible name of the link. */}
+            <span className="icon-btn shrink-0" aria-hidden="true">
+              <c.Icon />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display font-bold text-lg" style={{ color: "var(--text-1)" }}>
                 {c.label}
-              </span>
-              <span className="block font-display font-bold text-lg truncate" style={{ color: "var(--text-1)" }}>
-                {c.value}
               </span>
               <span className="block text-xs mt-0.5" style={{ color: "var(--text-3)" }}>
                 {c.note}
+              </span>
+              <span className="block text-xs mt-1" style={{ color: "var(--accent-hot)" }}>
+                {c.action}
               </span>
             </span>
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">

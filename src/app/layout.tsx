@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { Footer } from "@/components/Footer";
 import { RouteBackdrop } from "@/components/RouteBackdrop";
+import { RevealLayout } from "@/components/RevealLayout";
 
 /**
  * A LUXURY PAIRING. Two faces, two jobs.
@@ -47,15 +48,24 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      {/* pb-28: the player is fixed to the bottom of the viewport, so without
-          padding here it covers the last row of every page. */}
-      <body className={`${inter.variable} ${display.variable} pb-28`}>
-        {/* Behind everything, on every route but the landing page — which has
-            its own full-screen hero. See components/RouteBackdrop. */}
-        <RouteBackdrop />
-        <Header />
-        <main className="relative z-10">{children}</main>
+      {/* No pb-28 here any more. It reserved 112px at the bottom of EVERY page
+          for the player — but the player only mounts while something is
+          playing, so most of the time that was dead space. Worse, with the
+          footer reveal it double-counted: the page already ends with a gap the
+          exact height of the footer, so the padding pushed the content 112px
+          clear of the footer's top edge and left a bright band between them.
+          The footer clears the player itself now, and only when there is one. */}
+      <body className={`${inter.variable} ${display.variable}`}>
+        {/* The footer is fixed BEHIND everything; RevealLayout is the opaque
+            sheet that slides up off it. The backdrop lives INSIDE that sheet so
+            it can never paint over the footer — see RevealLayout for the paint
+            order this depends on. */}
         <Footer />
+        <RevealLayout>
+          <RouteBackdrop />
+          <Header />
+          <div className="relative z-10">{children}</div>
+        </RevealLayout>
         {/* Outside <main> and in the layout, so a preview keeps playing across
             navigation instead of being unmounted with the page. */}
         <AudioPlayer />

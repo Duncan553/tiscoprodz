@@ -87,7 +87,7 @@ export function BeatRow({ beat }: { beat: PublicBeat }) {
 
       {/* min-w-0 is what lets `truncate` fire: a grid item defaults to
           min-width:auto and refuses to shrink below its content. */}
-      <Link href={`/beats/${beat.id}`} className="min-w-0">
+      <Link href={`/beats/${beat.id}`} className="min-w-0 tap flex flex-col justify-center">
         <p className="font-display font-bold text-[0.9375rem] truncate" style={{ color: "var(--text-1)" }}>
           {beat.title}
           {inCart && (

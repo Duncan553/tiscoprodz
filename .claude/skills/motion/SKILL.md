@@ -230,6 +230,137 @@ The exiting slide must leave on the side the new one came from. Track the
 direction of the change and pass it into the variants (Motion's `custom` prop) —
 without it, every slide exits the same way and going backwards looks wrong.
 
+## Animating words (text motion)
+
+Type is the loudest thing on the page, so moving it is the highest-risk motion
+there is. Done right it reads as expensive. Done wrong it reads as broken, and it
+delays reading — the one thing a visitor came to do.
+
+### Split by WORD, not by letter
+
+Per-letter is the effect everyone reaches for first and it is almost always
+wrong here:
+
+- A 6-word headline is 6 nodes. The same line per-letter is ~40, each with its
+  own transform. On a mid-range Android that is a measurable frame cost for an
+  effect nobody consciously notices.
+- Letters landing one at a time reads as a *typewriter* — a machine spelling a
+  word. Words landing one at a time reads as a *voice*. This site sells beats;
+  the voice is the right register.
+- Letters break kerning. Each letter becomes its own inline-block, so the pair
+  kerning between them is dropped and the word visibly loosens.
+
+Per-letter is reserved for one or two words maximum (a wordmark), never a
+sentence.
+
+### The mask reveal is the one worth having
+
+Two nested elements per word:
+
+```
+<span class="split__word">      /* overflow: hidden — the mask, the slot   */
+  <span class="split__inner">   /* translateY(100%) → 0 — the word itself  */
+```
+
+The word slides up out of a slot it was always hiding inside. It is the
+typographic reveal every luxury site uses, and it costs one transform per word
+with no opacity fade needed — the mask does the hiding.
+
+The mask must be `overflow: hidden` on an `inline-block`, and the wrapper needs
+enough vertical room or the mask clips the descenders of g, y and p permanently.
+Give it `padding-bottom` and pull it back with a matching negative margin.
+
+### The stagger numbers
+
+- **Words: 55ms apart.** Under ~35ms they arrive as one blur and the stagger is
+  wasted work. Over ~90ms the sentence takes longer to finish than it takes to
+  read, which is the point where animation becomes an obstacle.
+- **Duration per word: 0.7s**, on `[0.16, 1, 0.3, 1]` — slow out, hard stop.
+- **Total budget: under 1.2s** for a headline. `words * 0.055 + 0.7` — so a
+  9-word headline is already at the ceiling. Longer headline, tighter stagger.
+- **Distance: 100%** (the word's own height) for a mask reveal, not a pixel
+  value. Pixels are wrong at a different font size; `100%` is always exactly one
+  slot.
+
+### Accessibility: this is where split text usually breaks
+
+Splitting a sentence into spans destroys it for a screen reader, which will
+announce the pieces as fragments. The fix is two attributes, and they are not
+optional:
+
+- `aria-label` on the CONTAINER, holding the original unsplit string.
+- `aria-hidden="true"` on every generated piece.
+
+The reader then announces the whole sentence and ignores the spans entirely. Set
+the label from the source string, never by reading the DOM back — the DOM is the
+thing you just broke.
+
+`prefers-reduced-motion`: do not translate at all. Vestibular triggers are about
+movement, and a headline sliding is movement. Fade the whole line as one, or
+just show it. Never stagger under reduced motion — a stagger IS the movement.
+
+### Never animate body text
+
+Headlines, a price, a single stat — those can move. A paragraph must not. The
+reader is trying to read it and the words are not there yet; you have made your
+own copy unreadable to look clever. Same rule for anything behind a click: a
+form label, an error message, a button. Those appear instantly.
+
+### The font trap
+
+Splitting before the webfont loads measures the FALLBACK font. The words get
+positioned at Times New Roman metrics, then the real font swaps in and every
+word jumps mid-animation. Gate on `document.fonts.ready` — or, better, don't
+measure at all: the mask reveal here uses `100%` and CSS flow, so it never reads
+a width and cannot be caught by this. Anything that measures pixels must wait.
+
+### Scroll-linked vs trigger
+
+A headline should fire ONCE when it enters view (`useInView`, `once: true`), not
+track scroll. Scroll-linked text that un-reveals when you scroll back up looks
+like a rendering bug. Reserve scroll-linked progress for the footer curtain and
+for long-form emphasis, never for a heading.
+
+## Pop, and why tap feedback is not decoration
+
+A phone has no hover state. On a desktop, the moment you put the cursor on a
+link the colour shifts and you know the thing is live. On a phone there is
+nothing between the tap and the next page painting — and on a slow connection
+that gap is a second or more of silence, which is exactly where people tap a
+second time. A double-submitted form, a doubled cart line.
+
+So `whileTap` is not a flourish. It is the only confirmation a touch device
+gets:
+
+```tsx
+whileTap={{ scale: 0.94 }}
+```
+
+Numbers that work:
+- **0.94** for a nav link or a button. 0.98 is invisible, 0.9 makes the layout
+  look like it flinched.
+- A **spring, not a duration** — `stiffness: 400, damping: 17`. The slight
+  overshoot on release is what reads as "pop". A tween reads as "fade".
+- Kill `-webkit-tap-highlight-color` when you add this. Otherwise the grey iOS
+  flash fires as well and the two fight.
+
+Mount pop vs press pop are different jobs and should be tuned separately: the
+mount stagger is decoration and runs once (damping 24, soft), the press is
+feedback and must feel instant (damping 17, springy).
+
+### The travelling active bar
+
+An active-route underline should MOVE between links, not cross-fade. One shared
+`layoutId` on every instance is the whole implementation — Motion then treats
+them as one element changing position and animates the gap:
+
+```tsx
+{active && <motion.span layoutId="nav-active" className="nav-link__bar" />}
+```
+
+It only works while every instance shares the id, and it needs a positioned
+ancestor on the link or the bar animates against the page instead.
+
 ## Rules that keep it honest
 
 1. **Motion must mean something** — where a thing came from, that a tap
