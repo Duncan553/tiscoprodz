@@ -23,7 +23,7 @@ export function PlateGraphic() {
         background:
           "radial-gradient(90% 70% at 22% 8%, rgb(255 90 70 / 0.38), transparent 62%)," +
           "radial-gradient(70% 60% at 85% 95%, rgb(20 0 3 / 0.85), transparent 70%)," +
-          "linear-gradient(155deg, #c0051a 0%, #7a0312 45%, #3a0109 100%)",
+          "linear-gradient(155deg, #9E2233 0%, #6B1222 45%, #3F0A16 100%)",
       }}
       aria-hidden="true"
     >

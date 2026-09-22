@@ -61,7 +61,7 @@ export function PageBackdrop({ src }: { src: string }) {
         background:
           "radial-gradient(90% 70% at 22% 8%, rgb(255 90 70 / 0.30), transparent 62%)," +
           "radial-gradient(70% 60% at 85% 95%, rgb(20 0 3 / 0.80), transparent 70%)," +
-          "linear-gradient(155deg, #a80418 0%, #6b0210 48%, #33010a 100%)",
+          "linear-gradient(155deg, #86182A 0%, #5A0F1E 48%, #330913 100%)",
       }}
     >
       <DuotoneFilter />

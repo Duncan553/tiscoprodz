@@ -20,9 +20,28 @@
      So the page is a gradient (see body, below) and these stops are its range.
      Surfaces still separate with WHITE at low alpha, never by mixing a darker
      red in — that was what dragged the earlier palette to maroon. */
-  --red-deep: #4a0410;   /* the edges */
-  --red:      #b8071c;   /* the body of the page */
-  --red-lit:  #e00a20;   /* where the light lands, upper centre */
+  /* CALM, NOT BRIGHT — the two things that make a red feel expensive rather
+     than loud, both measured rather than picked by eye:
+
+     1. A BLUE UNDERTONE AND LOWER CHROMA. Every luxury red sits here — Cartier
+        #801B2B, Valentino #6f2131 — not in the orange-leaning fire-engine reds.
+        The previous body colour ran at 93% saturation; this is 70%.
+
+     2. A TIGHT LIGHTNESS RANGE. The old stops swung 31 points from #e00a20 down
+        to #4a0410, and that swing was most of what read as restless: the page
+        was never one surface, it was a bright field fighting a near-black one.
+        The swing is now 17 points, so the gradient reads as light falling on a
+        single material instead of two colours meeting.
+
+     It is still unmistakably RED — hue 350, three degrees off where it was.
+     What changed is the saturation and the range, not the colour.
+
+     Bonus that is not a coincidence: white body text went from 6.81:1 to
+     9.64:1 against the page. Calming a ground colour and making it readable are
+     the same move. */
+  --red-deep: #5A0F1E;   /* the edges */
+  --red:      #86182A;   /* the body of the page */
+  --red-lit:  #9E2233;   /* where the light lands, upper centre */
 
   --surface-0: var(--red);
   --surface-1: rgb(255 255 255 / 0.07);   /* cards, rows — lifted, never darker */
@@ -47,7 +66,7 @@
   /* THE PRIMARY ACTION IS WHITE. On a saturated red ground white is the highest
      contrast available, and a warm accent on a warm ground is exactly how a
      button stops looking like a button. Amber survives as a small highlight. */
-  --on-accent: #8c0616;   /* deep red text, for sitting on a white fill */
+  --on-accent: #86182A;   /* deep red text, for sitting on a white fill */
   --accent:      #ffffff;
   --accent-hot:  #ffc861;
   --accent-soft: rgb(255 255 255 / 0.16);
@@ -581,7 +600,7 @@ input[type="range"]::-moz-range-thumb {
   background:
     radial-gradient(90% 70% at 22% 8%, rgb(255 90 70 / 0.38), transparent 62%),
     radial-gradient(70% 60% at 85% 95%, rgb(20 0 3 / 0.85), transparent 70%),
-    linear-gradient(155deg, #c0051a 0%, #7a0312 45%, #3a0109 100%);
+    linear-gradient(155deg, #9E2233 0%, #6B1222 45%, #3F0A16 100%);
 }
 
 /* The media, edge to edge. `cover` crops rather than letterboxes — a hero with

@@ -57,12 +57,20 @@ export function DuotoneFilter() {
                 lands near the shadow end. The middle stop lifts the mid-tones
                 clear of the background so the subject actually separates.
 
-                  shadow    -> #4d0712  just above the page, never below it
-                  mid       -> #b3241f  the tone that carries the image
-                  highlight -> #ffb492  warm, so highlights read as light */}
-            <feFuncR type="table" tableValues="0.302 0.702 1.000" />
-            <feFuncG type="table" tableValues="0.027 0.141 0.706" />
-            <feFuncB type="table" tableValues="0.071 0.122 0.573" />
+                Retoned with the palette. The ramp has to track the page: if
+                the ground calms down and the images keep the old hot ramp, the
+                footage reads as a different colour scheme pasted on top.
+
+                  shadow    -> #4f1220  just above the page, never below it
+                  mid       -> #ae2a3c  the tone that carries the image
+                  highlight -> #ffb492  warm, so highlights read as light
+
+                The mid stays a little brighter than --red-lit on purpose. It
+                is what separates the subject from the background; drop it to
+                the page tone and the image sinks into the page. */}
+            <feFuncR type="table" tableValues="0.310 0.678 1.000" />
+            <feFuncG type="table" tableValues="0.071 0.165 0.706" />
+            <feFuncB type="table" tableValues="0.125 0.235 0.573" />
           </feComponentTransfer>
         </filter>
       </defs>
