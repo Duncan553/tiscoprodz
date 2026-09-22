@@ -1,14 +1,59 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPublicBeat } from "@/lib/beats";
+import { LICENSES, LICENSE_ORDER } from "@/lib/licenses";
+import { env } from "@/lib/cf";
 import { BuyPanel } from "@/components/BuyPanel";
 import { SplitText } from "@/components/SplitText";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * A beat page is the only page on this site that can rank for a search someone
+ * actually types — "ventures trap beat", "146 bpm d minor". So it gets its own
+ * description built from its own facts instead of inheriting the site-wide one,
+ * which was identical on all five beat pages and told a search engine nothing
+ * about which was which.
+ *
+ * The cover art becomes the Open Graph image. That is the whole point of doing
+ * this here rather than only in the layout: a link to a specific beat, pasted
+ * into WhatsApp, should show THAT beat's artwork.
+ */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const beat = await getPublicBeat((await params).id);
-  return { title: beat ? beat.title : "Beat not found" };
+  if (!beat) return { title: "Beat not found" };
+
+  const site = env().SITE_URL || "https://tiscoprodz.tisco.workers.dev";
+  const cheapest = LICENSES[LICENSE_ORDER[0]].priceCents;
+
+  // Facts first, in the order a buyer scans them. No adjectives — a description
+  // stuffed with "amazing premium fire" is what a spam page looks like.
+  const bits = [beat.genre, `${beat.bpm} BPM`, beat.musicalKey].filter(Boolean);
+  const description =
+    `${beat.title} — ${bits.join(" · ")} instrumental by Tisco Prodz. ` +
+    (cheapest ? `Licences from $${(cheapest / 100).toFixed(2)}. ` : "") +
+    `Instant download, pay by card in USD.`;
+
+  const cover = `${site}${beat.coverUrl}`;
+
+  return {
+    title: beat.title,
+    description,
+    alternates: { canonical: `/beats/${beat.id}` },
+    openGraph: {
+      type: "music.song",
+      title: `${beat.title} — TISCOPRODZ`,
+      description,
+      url: `${site}/beats/${beat.id}`,
+      images: [{ url: cover, width: 1200, height: 1200, alt: `${beat.title} cover art` }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${beat.title} — TISCOPRODZ`,
+      description,
+      images: [cover],
+    },
+  };
 }
 
 export default async function BeatPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,8 +62,55 @@ export default async function BeatPage({ params }: { params: Promise<{ id: strin
   // exactly like a made-up id. A draft must not be reachable by knowing its URL.
   if (!beat) notFound();
 
+  const site = env().SITE_URL || "https://tiscoprodz.tisco.workers.dev";
+  const cheapest = LICENSES[LICENSE_ORDER[0]].priceCents;
+
+  /**
+   * STRUCTURED DATA. This is what lets a search result show the price and the
+   * artwork instead of a plain blue link, and it is the only way a crawler
+   * learns that this page sells something — nothing in the visible HTML says
+   * "this is a product costing $19.99" in a form a machine can read.
+   *
+   * MusicRecording rather than Product, with the licence as the offer: the
+   * thing on sale is a recording, and describing it accurately is also what
+   * makes it eligible for music-specific results.
+   *
+   * Every value here comes from the database or the licence table. Inventing
+   * ratings or review counts to win a star rating is exactly the kind of thing
+   * that gets structured data penalised, and it would be a lie besides.
+   */
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "MusicRecording",
+    name: beat.title,
+    byArtist: { "@type": "MusicGroup", name: "Tisco Prodz" },
+    genre: beat.genre || undefined,
+    url: `${site}/beats/${beat.id}`,
+    image: `${site}${beat.coverUrl}`,
+    audio: `${site}${beat.previewUrl}`,
+    ...(cheapest
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: (cheapest / 100).toFixed(2),
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+            url: `${site}/beats/${beat.id}`,
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* JSON-LD must be a script tag, so dangerouslySetInnerHTML is the only
+          way in. It is safe here because nothing in `jsonLd` is user input —
+          every field comes from our own database and licence table — and
+          JSON.stringify escapes the values regardless. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Link href="/beats" className="text-sm" style={{ color: "var(--text-3)" }}>
         ← Back to all beats
       </Link>

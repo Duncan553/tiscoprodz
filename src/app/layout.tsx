@@ -40,9 +40,41 @@ const display = Bodoni_Moda({
   weight: ["700", "800", "900"],
 });
 
+const SITE = process.env.SITE_URL || "https://tiscoprodz.tisco.workers.dev";
+
 export const metadata: Metadata = {
+  // metadataBase is what turns every relative image path below into the
+  // ABSOLUTE url that Open Graph requires. Without it Next warns and social
+  // platforms get a relative path they cannot fetch, so the preview silently
+  // falls back to no image — which is the failure this whole block exists to
+  // prevent.
+  metadataBase: new URL(SITE),
   title: { default: "TISCOPRODZ — Buy Beats Online", template: "%s — TISCOPRODZ" },
   description: "Original beats by Tisco Prodz. Instant download, pay by card in USD.",
+
+  // OPEN GRAPH. This is not a search-ranking feature — Google ignores it. It
+  // decides what a link LOOKS LIKE when it is pasted into WhatsApp, Instagram,
+  // Twitter or iMessage, which for a producer is the actual distribution
+  // channel. Without these a shared beat link is a bare blue string; with them
+  // it is a card with the artwork and the title.
+  openGraph: {
+    type: "website",
+    siteName: "TISCOPRODZ",
+    title: "TISCOPRODZ — Buy Beats Online",
+    description: "Original beats by Tisco Prodz. Instant download, pay by card in USD.",
+    url: SITE,
+    locale: "en",
+  },
+  twitter: {
+    // summary_large_image gives the wide card. The plain "summary" card crops
+    // artwork to a small square, which wastes the one visual asset we have.
+    card: "summary_large_image",
+    title: "TISCOPRODZ — Buy Beats Online",
+    description: "Original beats by Tisco Prodz. Instant download, pay by card in USD.",
+  },
+  // Tells a crawler which url is canonical when the same page is reachable by
+  // more than one address (with/without www, query strings from ad links).
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
