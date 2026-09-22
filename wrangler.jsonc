@@ -42,26 +42,25 @@
   ],
 
   // ---------------------------------------------------------------------------
-  // R2 — COMMENTED OUT UNTIL A PAYMENT METHOD IS ON THE ACCOUNT.
+  // R2 — artwork, previews and the master files people pay for.
   //
-  // Cloudflare requires a card before a bucket can be created, even on the free
-  // tier (10GB storage, free egress). Workers and D1 do not. `wrangler deploy`
-  // validates every binding, so leaving this declared while the bucket does not
-  // exist blocks the whole deploy.
+  // Enabled 2026-09-22. The free tier is 10GB of storage and, the part that
+  // matters for a shop selling audio, ZERO egress cost — every download of a
+  // 24MB master is free to serve. That is the reason this is R2 and not S3.
   //
-  // Everything except the FILES works without it: the landing page (hero video
-  // ships as a static asset, not from R2), licences, contact, admin sign-in,
-  // the promotion toggle. Upload and download routes answer 503 with a message
-  // saying exactly this — see storageUnavailable() in src/lib/cf.ts.
+  // `wrangler deploy` validates every binding, so this block and the bucket
+  // have to exist together: commenting it out again without deleting the bucket
+  // is how you get a deploy that succeeds and a site that 503s on every file.
   //
-  // TO TURN IT ON: add the card, `pnpm run r2:create`, uncomment this block,
-  // `pnpm run deploy`. No code changes.
-  // "r2_buckets": [
-  //   {
-  //     "binding": "R2",
-  //     "bucket_name": "tiscoprodz-media"
-  //   }
-  // ],
+  // The code degrades rather than crashes if the binding disappears — upload
+  // and download answer 503 with a clear message. See storageUnavailable() in
+  // src/lib/cf.ts.
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "tiscoprodz-media"
+    }
+  ],
 
   // Non-secret config ONLY. This file is committed, so nothing sensitive goes
   // in it. The three secrets — SESSION_SECRET, FLUTTERWAVE_SECRET_KEY,
@@ -69,7 +68,16 @@
   // pushed to production with `wrangler secret put`, where Cloudflare stores
   // them encrypted and they are never readable back.
   "vars": {
-    "SITE_URL": "https://tiscoprodz.com",
+    // WHERE THE BUYER COMES BACK TO. This is the origin used to build
+    // Flutterwave's redirect_url, so it must be a URL that actually exists —
+    // it was pointed at tiscoprodz.com, which is not registered. A buyer would
+    // have paid, been redirected to a dead domain, and never reached the screen
+    // holding their download links. The order would be marked paid by the
+    // webhook and the customer would have nothing.
+    //
+    // Change this the day a real domain is attached, and change it FIRST:
+    // deploying the domain without updating this points checkout at the old one.
+    "SITE_URL": "https://tiscoprodz.tisco.workers.dev",
     "ADMIN_EMAIL": "tscoprodz@gmail.com"
   },
 

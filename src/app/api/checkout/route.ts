@@ -196,9 +196,15 @@ export async function POST(req: Request) {
       discountUsdCents: discountCents,
     });
   } catch (err) {
+    // The message goes to the LOG, never to the client. Returning it directly
+    // leaked the entire failing SQL statement and its bound parameters to
+    // anyone who could make checkout fail — table and column names, the email,
+    // and the order's download token, which is the secret that unlocks the
+    // files. A caller cannot act on our internals anyway; they need to know it
+    // failed and that trying again is reasonable.
     console.error("[checkout]", (err as Error).message);
     return Response.json(
-      { ok: false, message: (err as Error).message || "Could not start the payment." },
+      { ok: false, message: "Could not start the payment. Please try again." },
       { status: 500 }
     );
   }
