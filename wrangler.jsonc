@@ -63,13 +63,13 @@
   ],
 
   // Non-secret config ONLY. This file is committed, so nothing sensitive goes
-  // in it. The three secrets — SESSION_SECRET, FLUTTERWAVE_SECRET_KEY,
-  // FLUTTERWAVE_SECRET_HASH — live in .dev.vars locally (gitignored) and are
+  // in it. The secrets — SESSION_SECRET, PAYSTACK_SECRET_KEY,
+  // PAYSTACK_PRODUCER_SUBACCOUNT — live in .dev.vars locally (gitignored) and are
   // pushed to production with `wrangler secret put`, where Cloudflare stores
   // them encrypted and they are never readable back.
   "vars": {
     // WHERE THE BUYER COMES BACK TO. This is the origin used to build
-    // Flutterwave's redirect_url, so it must be a URL that actually exists —
+    // Paystack's callback_url, so it must be a URL that actually exists —
     // it was pointed at tiscoprodz.com, which is not registered. A buyer would
     // have paid, been redirected to a dead domain, and never reached the screen
     // holding their download links. The order would be marked paid by the

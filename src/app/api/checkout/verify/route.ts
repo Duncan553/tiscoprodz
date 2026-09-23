@@ -1,15 +1,15 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/cf";
 import { orders } from "@/db/schema";
-import { verifyPayment } from "@/lib/flutterwave";
+import { verifyPayment } from "@/lib/paystack";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 /**
- * "Did the money land?" — polled by the cart while the buyer is on Flutterwave's
+ * "Did the money land?" — polled by the cart while the buyer is on Paystack's
  * page, and once when they come back.
  *
- * Flutterwave is asked directly. The browser returns with `?status=successful`
- * on the URL and that string is never believed — anyone can type it.
+ * Paystack is asked directly. The browser coming back to /cart is never
+ * believed — anyone can type that URL.
  *
  * Two checks before anything is released:
  *   AMOUNT   — a different figure than the USD we recorded means `flagged`
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
     }
 
     // Already settled — could be this route or the webhook that did it. Answer
-    // from our own row instead of asking Flutterwave again.
+    // from our own row instead of asking Paystack again.
     if (order.status === "paid") {
       return Response.json({
         ok: true,
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
 
       if (!amountOk || !currencyOk) {
         console.error(
-          `[verify] mismatch ${reference}: flw=${tx.amountUsdCents} ${tx.currency} order=${order.amountUsdCents} USD`
+          `[verify] mismatch ${reference}: paystack=${tx.amountUsdCents} ${tx.currency} order=${order.amountUsdCents} USD`
         );
         await d
           .update(orders)

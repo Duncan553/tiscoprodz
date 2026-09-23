@@ -1,7 +1,7 @@
 import { inArray, eq } from "drizzle-orm";
 import { db, env } from "@/lib/cf";
 import { beats, orders } from "@/db/schema";
-import { startPayment, producerShareCents, hasSplit } from "@/lib/flutterwave";
+import { startPayment, producerShareCents, hasSplit } from "@/lib/paystack";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { LICENSES, isLicenseId, isAvailableFor, type LicenseId } from "@/lib/licenses";
 import { applyPromo } from "@/lib/promo";
@@ -23,7 +23,7 @@ import { getPromo } from "@/lib/promo-server";
  *   2. price from the tiers   the authority
  *   3. apply the promotion    read from the DB, never from the request
  *   4. INSERT the order       before charging, so a payer always has a row
- *   5. call Flutterwave       last, because it is the irreversible step
+ *   5. call Paystack          last, because it is the irreversible step
  *
  * Step 3 before step 4 is the important one. If the insert fails after the
  * charge, someone has paid for files the download route can never find.
@@ -128,10 +128,10 @@ export async function POST(req: Request) {
       promo
     );
 
-    // Flutterwave's floor for a USD charge — checked on the DISCOUNTED total,
+    // Paystack's floor for a USD charge is $2 — checked on the DISCOUNTED total,
     // because that is the figure being sent.
-    if (totalCents < 100) {
-      return Response.json({ ok: false, message: "Minimum order is $1." }, { status: 400 });
+    if (totalCents < 200) {
+      return Response.json({ ok: false, message: "Minimum order is $2." }, { status: 400 });
     }
 
     const reference = `TSC-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
@@ -145,9 +145,9 @@ export async function POST(req: Request) {
     // what the customer actually paid, not of a list price nobody was charged.
     const producerCents = producerShareCents(totalCents);
 
-    // WHETHER FLUTTERWAVE WILL SETTLE THE PRODUCER DIRECTLY, recorded on the
+    // WHETHER PAYSTACK WILL SETTLE THE PRODUCER DIRECTLY, recorded on the
     // order. This was missing, and the column defaults to 0 — so every order,
-    // including ones Flutterwave had already split at source, was stored as
+    // including ones already split at source, was stored as
     // "not split". The earnings page reads exactly that flag to decide what
     // still has to be paid by hand, so it was reporting the producer's full 90%
     // as owed on orders they had already been paid for. Paying that list out
@@ -179,14 +179,14 @@ export async function POST(req: Request) {
       email,
       amountUsdCents: totalCents,
       reference,
-      // Flutterwave appends ?tx_ref=…&status=… to this. The cart reads tx_ref
+      // Paystack appends ?trxref=…&reference=… to this. The cart reads reference
       // and verifies server-side; the status in the URL is never believed.
       redirectUrl: `${origin}/cart`,
       metadata: { order_id: reference, item_count: verified.length },
     });
 
     // No download token in this reply: the order is still `pending`. The token
-    // is released by /api/checkout/verify once Flutterwave confirms the amount.
+    // is released by /api/checkout/verify once Paystack confirms the amount.
     return Response.json({
       ok: true,
       reference,

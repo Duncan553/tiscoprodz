@@ -98,7 +98,7 @@ export const orders = sqliteTable(
     discountUsdCents: integer("discount_usd_cents").notNull().default(0),
 
     // THE SPLIT, recorded per order. The producer's 90% is settled directly to
-    // their Flutterwave subaccount, so this is not an instruction — it is the
+    // their Paystack subaccount, so this is not an instruction — it is the
     // record of what was instructed, kept because the share can be changed and
     // an old order must still explain itself.
     producerUsdCents: integer("producer_usd_cents").notNull().default(0),

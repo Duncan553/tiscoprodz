@@ -10,20 +10,17 @@
 #   openssl rand -hex 32
 SESSION_SECRET=
 
-# Flutterwave SECRET key (FLWSECK_TEST-… while testing). Never the public key,
-# and never in wrangler.jsonc — that file is committed.
-FLUTTERWAVE_SECRET_KEY=
+# Paystack SECRET key (sk_test_… while testing, sk_live_… for real money).
+# Never the public key, and never in wrangler.jsonc — that file is committed.
+# It also signs every webhook (HMAC-SHA512), so there is no separate hash.
+PAYSTACK_SECRET_KEY=
 
-# The producer's Flutterwave SUBACCOUNT id — looks like RS_1A2B3C...
-# This is what sends them 90% of every sale directly, with no payout run.
+# The CLIENT's Paystack SUBACCOUNT code — looks like ACCT_xxxxxxxxxx.
+# Create it in Dashboard -> Subaccounts against their USD-capable bank account.
+# The client receives 90% of every sale directly; the main account keeps 10%.
 # Leave it empty and sales still work; the whole amount just lands in the main
 # account and /admin -> Earnings flags those orders as needing a manual payout.
-FLUTTERWAVE_PRODUCER_SUBACCOUNT=
-
-# The "Secret hash" you type into Flutterwave's webhook settings. Flutterwave
-# sends it back in the `verif-hash` header on every webhook, and that is the
-# only thing proving a webhook is really from them.
-FLUTTERWAVE_SECRET_HASH=
+PAYSTACK_PRODUCER_SUBACCOUNT=
 
 # Used only when the live FX lookup fails. KES per USD, and the margin above
 # mid-market that covers the bank's spread.

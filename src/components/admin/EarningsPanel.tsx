@@ -43,7 +43,7 @@ export function EarningsPanel() {
       <p className="text-sm mt-1 mb-4" style={{ color: "var(--text-2)" }}>
         Paid orders only — a cart that reached the payment page and stopped is not
         revenue. Producer keeps <strong>{data.producerSharePct}%</strong>, settled
-        straight to their own Flutterwave account.
+        straight to their own Paystack subaccount.
       </p>
 
       {/* The most important thing on this panel is whether the split is even
@@ -56,7 +56,7 @@ export function EarningsPanel() {
         >
           <strong>No producer subaccount set.</strong> Sales still go through, but the
           whole amount lands in the main account and the {data.producerSharePct}% has
-          to be sent manually. Set <code>FLUTTERWAVE_PRODUCER_SUBACCOUNT</code> to fix.
+          to be sent manually. Set <code>PAYSTACK_PRODUCER_SUBACCOUNT</code> to fix.
         </div>
       )}
 

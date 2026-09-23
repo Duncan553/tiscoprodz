@@ -13,20 +13,19 @@ import type { DownloadLink } from "@/types/beat";
 /**
  * CHECKOUT.
  *
- * One path, because Flutterwave hosts the payment page itself:
+ * One path, because Paystack hosts the payment page itself:
  *
- *   POST /api/checkout  ->  full redirect to Flutterwave's card page  ->  they
- *   come back to /cart?tx_ref=…  ->  the mount effect below verifies that
+ *   POST /api/checkout  ->  full redirect to Paystack's card page  ->  they
+ *   come back to /cart?reference=…  ->  the mount effect below verifies that
  *   reference SERVER-SIDE  ->  on "paid" we get a download token  ->  GET
  *   /api/download for the links.
  *
  * The charge is in US DOLLARS, and dollars are the only currency on the site.
  *
- * Flutterwave also puts `?status=successful` on the return URL. It is ignored
- * completely — anyone can type that into the address bar. Only our own verify
- * route, which asks Flutterwave directly, decides whether an order is paid.
+ * Arriving back on /cart proves nothing — anyone can type that URL. Only our
+ * own verify route, which asks Paystack directly, decides whether an order is paid.
  *
- * Polling still exists because the redirect can land before Flutterwave has
+ * Polling still exists because the redirect can land before Paystack has
  * finished settling on its side.
  *
  * The cart survives the redirect because it lives in localStorage. The download
@@ -129,7 +128,7 @@ function CartInner() {
         if (result !== "waiting" || attempts >= 24) {
           if (pollRef.current) clearInterval(pollRef.current);
           if (result === "waiting" && attempts >= 24) {
-            setMessage("Still not confirmed. Check your messages from Flutterwave, then hit Check again.");
+            setMessage("Still not confirmed. Check your email from Paystack, then hit Check again.");
           }
         }
       }, 5000);
@@ -137,11 +136,11 @@ function CartInner() {
     [checkOnce]
   );
 
-  // Coming back from Flutterwave: ?tx_ref= is on the URL (older links use
-  // ?reference=). Verify it immediately instead of leaving the buyer on an empty
+  // Coming back from Paystack: ?reference= is on the URL (?tx_ref= is from
+  // the Flutterwave era, kept so an in-flight return still lands). Verify it immediately instead of leaving the buyer on an empty
   // cart wondering whether their money went anywhere.
   useEffect(() => {
-    const returned = searchParams.get("tx_ref") || searchParams.get("reference");
+    const returned = searchParams.get("reference") || searchParams.get("tx_ref");
     if (!returned) return;
     setReference(returned);
     setStage("waiting");
@@ -176,8 +175,8 @@ function CartInner() {
         throw new Error(data.message || "Payment could not start.");
       }
 
-      // Leave the site. Everything after this happens on Flutterwave's page,
-      // and they send the buyer back to /cart?tx_ref=… when it's done.
+      // Leave the site. Everything after this happens on Paystack's page,
+      // and they send the buyer back to /cart?reference=… when it's done.
       window.location.assign(data.checkoutUrl);
       return;
     } catch (err) {
@@ -263,7 +262,6 @@ function CartInner() {
   }
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  // Phone is optional: Flutterwave collects whatever the chosen channel needs.
   const canPay = emailValid && !busy;
 
   return (
@@ -351,7 +349,7 @@ function CartInner() {
         </div>
 
         <p className="text-xs" style={{ color: "var(--text-3)" }}>
-          You&apos;ll pay by card on Flutterwave&apos;s secure page, in US dollars.
+          You&apos;ll pay by card on Paystack&apos;s secure page, in US dollars.
           We never see your card details.
         </p>
 

@@ -35,15 +35,14 @@ export interface Bindings {
   // Secrets. Set in .dev.vars for `wrangler dev`, and with
   // `wrangler secret put <NAME>` for production.
   SESSION_SECRET: string;
-  FLUTTERWAVE_SECRET_KEY: string;
+  /** sk_test_… / sk_live_… — also the key that signs webhooks. */
+  PAYSTACK_SECRET_KEY: string;
   /**
-   * The producer's Flutterwave SUBACCOUNT id (looks like `RS_XXXX…`).
+   * The producer's Paystack SUBACCOUNT code (looks like `ACCT_xxxx…`).
    * Optional: without it the sale still completes, it just all lands in the
    * main account and `split_applied` is recorded as 0 on the order.
    */
-  FLUTTERWAVE_PRODUCER_SUBACCOUNT?: string;
-  /** The fixed string typed into Flutterwave's webhook settings. */
-  FLUTTERWAVE_SECRET_HASH: string;
+  PAYSTACK_PRODUCER_SUBACCOUNT?: string;
   USD_TO_KES_FALLBACK?: string;
   USD_TO_KES_MARGIN?: string;
 }

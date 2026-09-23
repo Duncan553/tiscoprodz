@@ -2,7 +2,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/cf";
 import { orders } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import { PRODUCER_SHARE, hasSplit } from "@/lib/flutterwave";
+import { PRODUCER_SHARE, hasSplit } from "@/lib/paystack";
 
 /**
  * EARNINGS — what was sold, and how it was split.
