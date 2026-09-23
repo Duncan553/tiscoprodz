@@ -22,6 +22,11 @@ PAYSTACK_SECRET_KEY=
 # account and /admin -> Earnings flags those orders as needing a manual payout.
 PAYSTACK_PRODUCER_SUBACCOUNT=
 
+# LOCAL TESTING ONLY. Paystack refuses USD until the business has it enabled,
+# so set KES here to run the full pay -> download loop with test cards.
+# Leave empty (or absent) for real USD. Never put it in wrangler.jsonc.
+PAYSTACK_CURRENCY=
+
 # Used only when the live FX lookup fails. KES per USD, and the margin above
 # mid-market that covers the bank's spread.
 USD_TO_KES_FALLBACK=130

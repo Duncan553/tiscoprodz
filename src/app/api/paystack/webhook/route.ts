@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/cf";
 import { orders } from "@/db/schema";
-import { verifyWebhookSignature, verifyPayment } from "@/lib/paystack";
+import { verifyWebhookSignature, verifyPayment, chargeCurrency } from "@/lib/paystack";
 
 /**
  * THE SAFETY NET.
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   const settled =
     tx.status === "success" &&
     tx.amountUsdCents === order.amountUsdCents &&
-    (tx.currency || "").toUpperCase() === "USD";
+    (tx.currency || "").toUpperCase() === chargeCurrency();
 
   if (!settled) {
     console.error(

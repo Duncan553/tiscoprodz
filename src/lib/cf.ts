@@ -43,6 +43,8 @@ export interface Bindings {
    * main account and `split_applied` is recorded as 0 on the order.
    */
   PAYSTACK_PRODUCER_SUBACCOUNT?: string;
+  /** LOCAL TESTING ONLY — see chargeCurrency() in src/lib/paystack.ts. */
+  PAYSTACK_CURRENCY?: string;
   USD_TO_KES_FALLBACK?: string;
   USD_TO_KES_MARGIN?: string;
 }

@@ -29,6 +29,20 @@ function secret(): string {
 }
 
 /**
+ * The currency every charge is made in: USD, always, in production.
+ *
+ * PAYSTACK_CURRENCY exists for ONE reason — local testing before the business
+ * has USD enabled. Paystack refuses USD until then ("Currency not supported by
+ * merchant"), so the local .dev.vars sets it to KES and the whole pay ->
+ * verify -> download loop can be exercised with test cards. The number sent is
+ * the same cents figure either way (1999 = KES 19.99 in a test), so nothing
+ * about the maths changes. Never set it in wrangler.jsonc.
+ */
+export function chargeCurrency(): string {
+  return (env().PAYSTACK_CURRENCY || "USD").toUpperCase();
+}
+
+/**
  * THE REVENUE SPLIT.
  *
  * The producer keeps 90%, the platform keeps 10%. Paystack settles the
@@ -97,7 +111,7 @@ export async function startPayment(opts: {
     body: JSON.stringify({
       email: opts.email,
       amount: opts.amountUsdCents, // cents — Paystack's subunit
-      currency: "USD",
+      currency: chargeCurrency(),
       reference: opts.reference,
       // Paystack appends ?trxref=…&reference=… to this on the way back.
       callback_url: opts.redirectUrl,

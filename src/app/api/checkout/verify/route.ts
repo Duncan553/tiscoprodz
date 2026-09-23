@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/cf";
 import { orders } from "@/db/schema";
-import { verifyPayment } from "@/lib/paystack";
+import { verifyPayment, chargeCurrency } from "@/lib/paystack";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 /**
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
 
     if (tx.status === "success") {
       const amountOk = tx.amountUsdCents === order.amountUsdCents;
-      const currencyOk = (tx.currency || "").toUpperCase() === "USD";
+      const currencyOk = (tx.currency || "").toUpperCase() === chargeCurrency();
 
       if (!amountOk || !currencyOk) {
         console.error(
