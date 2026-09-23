@@ -82,6 +82,9 @@ ok(await verifyWebhookSignature(body + " ", good) === false, "one byte of body c
 ok(await verifyWebhookSignature(body, createHmac("sha512", "sk_wrong").update(body).digest("hex")) === false, "signed with another key -> rejected");
 ok(await verifyWebhookSignature(body, null) === false, "missing header rejected");
 ok(await verifyWebhookSignature(body, "abc") === false, "garbage header rejected");
+(globalThis as any).__NOKEY__ = true;
+ok(await verifyWebhookSignature(body, good) === false, "no secret key configured -> rejected, not thrown");
+(globalThis as any).__NOKEY__ = undefined;
 
 console.log("\n=== 5. EVERY LICENCE TIER, SPLIT ===");
 for (const id of LICENSE_ORDER) {

@@ -176,10 +176,14 @@ export async function verifyPayment(reference: string): Promise<PsTransaction> {
 export async function verifyWebhookSignature(rawBody: string, signature: string | null): Promise<boolean> {
   // SHA-512 is 64 bytes = 128 hex chars. Anything else is not a signature.
   if (!signature || !/^[0-9a-f]{128}$/i.test(signature)) return false;
+  // No key configured = nothing can be verified = reject. Calling secret()
+  // here would throw and answer 500, which Paystack treats as "retry".
+  const keyText = env().PAYSTACK_SECRET_KEY;
+  if (!keyText) return false;
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
-    enc.encode(secret()),
+    enc.encode(keyText),
     { name: "HMAC", hash: "SHA-512" },
     false,
     ["verify"]
